@@ -1,0 +1,121 @@
+Q1.i have logical replication goning on server then how i will excute create table command:-
+
+Step 1: Run CREATE TABLE on Publisher
+
+-- On primary/publisher
+CREATE TABLE sales_data (
+    id serial PRIMARY KEY,
+    customer_name text,
+    purchase_date date,
+    amount numeric
+);
+
+Step 2: Run Same CREATE TABLE on Subscriber
+
+-- On replica/subscriber
+CREATE TABLE sales_data (
+    id serial PRIMARY KEY,
+    customer_name text,
+    purchase_date date,
+    amount numeric
+);
+
+Step 2:
+ALTER SUBSCRIPTION subscription_name REFRESH PUBLICATION;
+
+✅ When to Use REFRESH PUBLICATION
+
+Use it when:
+
+You’ve added new tables to the publication using:
+
+ALTER PUBLICATION my_publication ADD TABLE new_table;
+
+
+But those new tables aren’t automatically picked up by the subscription.
+
+And you want to sync structure and start replicating those new tables without recreating the subscription.
+
+
+Q2:- Replication slot failed Resaon
+
+:- 
+
+🔍 Common Reasons Why a Replication Slot Fails
+1. Subscriber Down / Stopped
+
+The logical subscriber server is stopped, crashed, or not running.
+
+The slot remains on publisher but is inactive = false.
+
+2. Network / Connectivity Issue
+
+Network link between publisher and subscriber broken.
+
+Firewalls, SSL certificate expiry, or DNS issues stop replication.
+
+3. Subscription Disabled or Dropped
+
+Someone ran:
+
+ALTER SUBSCRIPTION sub_name DISABLE;
+
+
+Or subscription dropped without dropping the slot.
+
+The slot is left behind but never consumed.
+
+4. Schema or Data Apply Error on Subscriber
+
+Subscriber encounters error applying changes (e.g. missing column, constraint violation).
+
+Apply worker crashes repeatedly → slot stops advancing.
+
+5. Old / Long Transaction on Subscriber
+
+If subscriber has a long-running transaction, it may not confirm flush LSN.
+
+Publisher WAL retention grows because slot is waiting.
+
+6. Resource Issues on Subscriber
+
+Subscriber out of disk space, memory, or CPU → apply worker fails.
+
+Replication halts → slot inactive.
+
+7. Misconfigured Replication
+
+Publisher and subscriber versions not compatible.
+
+Publication/subscription misaligned (e.g. wrong tables).
+
+Apply worker cannot keep up.
+
+8. Manual Intervention
+
+Slot may be manually marked inactive or left behind if subscriber dropped incorrectly.
+
+✅ How to Diagnose
+
+On Publisher:
+
+SELECT slot_name, active, restart_lsn, confirmed_flush_lsn
+FROM pg_replication_slots;
+
+
+If active = false → slot is not being used by subscriber.
+
+If restart_lsn not moving → subscriber stuck.
+
+On Subscriber:
+
+SELECT * FROM pg_stat_subscription;
+
+
+Check if subscription is enabled.
+
+Look at last_error field (in recent versions) for the exact reason.
+
+👉 In simple words:
+Replication slot fails when subscriber is not reading WAL.
+This can be due to subscriber down, network issues, subscription disabled, apply errors, or resource problems.
