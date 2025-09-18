@@ -1,0 +1,111 @@
+autovacuum = on                 # Enable autovacuum subprocess?  'on'
+                                        # requires track_counts to also be on.
+autovacuum_max_workers = 3              # max number of autovacuum subprocesses
+                                        # (change requires restart)
+autovacuum_naptime = 15min              # time between autovacuum runs
+autovacuum_vacuum_threshold = 50        # min number of row updates before
+                                        # vacuum
+autovacuum_vacuum_insert_threshold = 20000      # min number of row inserts
+                                        # before vacuum; -1 disables insert
+                                        # vacuums
+autovacuum_analyze_threshold = 50       # min number of row updates before
+                                        # analyze
+autovacuum_vacuum_scale_factor = 0.2    # fraction of table size before vacuum
+                                        # size before insert vacuum
+autovacuum_freeze_max_age = 200000000   # maximum XID age before forced vacuum
+                                        # (change requires restart)
+autovacuum_multixact_freeze_max_age = 400000000 # maximum multixact age
+                                        # before forced vacuum
+                                        # (change requires restart)
+autovacuum_vacuum_cost_delay = 2ms      # default vacuum cost delay for
+                                        # autovacuum, in milliseconds;
+                                        # -1 means use vacuum_cost_delay
+autovacuum_vacuum_cost_limit = 600      # default vacuum cost limit for
+                                        # autovacuum, -1 means use
+                                        # vacuum_cost_limit
+
+
+=================================================================================================================================================================
+
+===================================
+Autovacuum Settings for Large Tables in PostgreSQL
+===================================
+
+In PostgreSQL, AUTOVACUUM and ANALYZE are essential features for maintaining performance and preventing issues like table bloat. These features can be fine-tuned to work well with large tables, ensuring that your database operates efficiently.
+
+Autovacuum is a background process in PostgreSQL that automatically handles the following:
+
+VACUUM - Cleans up dead tuples left behind by updates and deletes, reclaiming storage and preventing bloat.
+
+ANALYZE - Collects statistics about table contents, which helps the query planner make efficient decisions.
+
+======================================================================================================================================================
+
+Autovacuum Settings for Large Tables:
+
+autovacuum_vacuum_threshold - This is the minimum number of dead tuples needed before a vacuum is triggered. Default is 50 for most tables.
+
+autovacuum_vacuum_scale_factor - This is the percentage of the table that needs to be dead tuples before a vacuum is triggered. 
+
+autovacuum_analyze_threshold - This is the minimum number of rows that need to be inserted, updated, or deleted before an ANALYZE is triggered.
+
+autovacuum_analyze_scale_factor - The percentage of the table that must be modified before an ANALYZE is triggered.
+
+============================================================================================================================================================
+
+Autovacuum Vacuum Threshold Formula:
+
+vacuum_trigger = autovacuum_vacuum_threshold + (autovacuum_vacuum_scale_factor * table_size)
+
+Note: Here table_size is the size of the table in terms of rows.
+
+Ex: Let’s say you have a table with 1,000,000 rows, and the parameters are:
+ 
+autovacuum_vacuum_threshold = 50
+autovacuum_vacuum_scale_factor = 0.2 (20%)
+ 
+The formula would be:
+ 
+vacuum_trigger = 50 + (0.2 * 1,000,000) = 50 + 200,000 = 200,050
+
+So, the autovacuum process will trigger once 200,050 dead tuples are accumulated in the table.
+
+=================================================================================================================================================================
+ 
+Autovacuum Analyze Threshold Formula
+ 
+vacuum_trigger = autovacuum_vacuum_threshold + (autovacuum_vacuum_scale_factor * table_size)
+ 
+Example: For the same 1,000,000 row table, let's say the parameters are:
+ 
+autovacuum_analyze_threshold = 100
+autovacuum_analyze_scale_factor = 0.05 (5%)
+ 
+analyze_trigger = 100 + (0.05 * 1,000,000) = 100 + 50,000 = 50,100
+ 
+So, 50,100 modified rows will trigger an ANALYZE operation on this table.
+ 
+=============================================================================================================================================================
+
+Checking Dead Tuples and Vacuum Information:
+ 
+SELECT relname AS table_name, n_dead_tup AS dead_tuples,last_vacuum,
+ last_autovacuum,last_analyze,last_autoanalyze
+FROM pg_stat_user_tables WHERE n_dead_tup > 0 ORDER BY n_dead_tup DESC;
+ 
+============================================================================================================================================================
+
+Viewing Table Statistics with pg_stat_all_tables:
+ 
+SELECT schemaname,relname AS table_name,n_dead_tup AS dead_tuples,
+ last_vacuum,last_autovacuum,last_analyze,last_autoanalyze
+FROM 
+ pg_stat_all_tables WHERE n_dead_tup > 0 ORDER BY n_dead_tup DESC;
+
+===========================================================================================================================================================
+ 
+Dead tuples and vacuum/analyze info:
+ 
+SELECT relname AS table_name, n_dead_tup AS dead_tuples,
+ last_vacuum,last_autovacuum,last_analyze,last_autoanalyze
+FROM pg_stat_user_tables WHERE n_dead_tup > 0 ORDER BY n_dead_tup DESC;
