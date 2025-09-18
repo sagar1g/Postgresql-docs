@@ -1,0 +1,132 @@
+create ,alter:- (DDL command)
+
+1. first we have to run on reporting db
+
+2. run on production db
+
+3.add this table on publication
+
+4. refersh subcription:- 
+
+alter subscription <subscription_name> refersh publication 
+
+==========================================================================================
+
+publisher:- to see lag in GB
+
+SELECT 
+  slot_name,
+  active,
+  restart_lsn,
+  pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)) AS wal_lag_pretty,
+  round(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn) / 1024.0 / 1024.0, 2) AS wal_lag_mb,
+  round(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn) / 1024.0 / 1024.0 / 1024.0, 2) AS wal_lag_gb
+FROM pg_replication_slots
+WHERE slot_type = 'logical' AND active = false;
+
+
+
+
+
+subscriber:- to see lag
+
+SELECT 
+  slot_name AS replication_slot,
+  active AS is_active,
+  restart_lsn,
+  pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)) AS wal_lag_pretty,
+  ROUND(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn) / 1024.0 / 1024.0, 2) AS wal_lag_mb,
+  ROUND(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn) / 1024.0 / 1024.0 / 1024.0, 2) AS wal_lag_gb
+FROM pg_replication_slots
+WHERE slot_type = 'logical'
+  AND active = false;
+  
+  
+  SELECT 
+  slot_name AS replication_slot,
+  active AS is_active,
+  restart_lsn,
+  pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)) AS wal_lag_pretty,
+  ROUND(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn) / 1024.0 / 1024.0, 2) AS wal_lag_mb,
+  ROUND(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn) / 1024.0 / 1024.0 / 1024.0, 2) AS wal_lag_gb
+FROM pg_replication_slots
+WHERE slot_type = 'logical'
+  AND active = false;
+
+
+
+
+SELECT 
+  subname,
+  pid,
+  received_lsn,
+  latest_end_lsn,
+  pg_wal_lsn_diff(latest_end_lsn, received_lsn) AS lag_bytes
+FROM pg_stat_subscription
+WHERE subname = 'sub_buyer';
+
+
+CREATE SUBSCRIPTION sub_intl_bank 
+CONNECTION 'host=172.16.34.25 port=5432 user=replicator password=prod#replicator dbname=bud_intl_bank_db connect_timeout=10 sslmode=prefer'  
+PUBLICATION pub_intl_bank 
+WITH (
+  connect = true, 
+  enabled = true, 
+  slot_name = 'sub_intl_bank',
+  create_slot = false,
+  copy_data = false,
+  synchronous_commit = 'off'
+);
+
+
+
+
+
+
+
+================================================================
+
+
+  
+  
+select * from pg_replication_slots where active=false;
+
+Alter subscription sub_issue_endorse refresh publication;
+
+SELECT
+    t.relname AS locked_table,
+    l.transactionid,
+    l.mode,
+    l.pid,
+    l.granted
+FROM
+    pg_catalog.pg_locks l
+    JOIN pg_catalog.pg_class t ON t.oid = l.relation
+WHERE
+    t.relname = 'ecgc_ecib_claim_recovery_int_seq_no_tbl';-----How to check table is locked or unlocked
+
+
+
+SELECT 
+  d.datname AS database_name,
+  pg_size_pretty(pg_database_size(d.datname)) AS size
+FROM 
+  pg_database d;--SQL query to get the sizes of all databases
+  
+  
+SELECT pg_size_pretty(SUM(pg_database_size(datname))) AS total_size
+FROM pg_database;--Total size of database 
+  
+select datname,count(*) from pg_stat_activity group by datname order by 2 desc;
+
+select count(*) from pg_stat_activity
+
+
+select distinct client_addr,datname,usename,state,wait_event,count (*) FROM pg_stat_activity WHERE datname like '%_db' and usename like '%_prod' group by client_addr,datname,usename,state,wait_event order by datname;
+
+select total_exec_time/1000 as total_exec_time_in_sec,
+mean_exec_time/1000 as mean_exec_time_in_sec, calls ,max_exec_time/1000
+as max_exec_time_in_sec, shared_blks_hit,datname,min_exec_time/1000 as
+min_exec_time_in_sec,query,stddev_exec_time,rows from pg_stat_statements
+join pg_database on dbid=oid
+where datname ='bud_buyer_db' order by max_exec_time desc;
