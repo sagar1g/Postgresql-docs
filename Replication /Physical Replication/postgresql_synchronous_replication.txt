@@ -1,0 +1,18 @@
+
+Synchronous Replication in PostgreSQL 16
+
+Implementing synchronous replication in PostgreSQL ensures that each write transaction is confirmed on both the primary and a designated synchronous standby server before it is considered complete. 
+This setup enhances data durability and consistency at the cost of increased commit latency. Below is a step-by-step guide on setting up synchronous replication in PostgreSQL 16.
+
+1.master server: -
+postgresql.conf
+
+    wal_level = replica
+    max_wal_senders = 5
+    synchronous_commit = on
+    synchronous_standby_names = 'FIRST 1 (sync_standby_1)'
+	 hot_standby = on.
+	 
+2.Create a Base Backup:
+
+pg_basebackup -h primary_ip -D /path/to/standby/data/dir -U replicator -Fp -Xs -P -R
