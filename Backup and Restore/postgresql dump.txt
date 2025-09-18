@@ -1,0 +1,141 @@
+A. logical backup 
+
+1. single database backup:- 
+
+pg_dump -U user_name -d database_name -f location  -----plain backup
+
+
+2. comapress backup:- 
+
+pg_dumpall | gzip > [filepath]/[backupfilename].gz
+
+3. schema backup:- 
+
+pg_dump -U username -d database -n schema -f location 
+
+
+
+
+parameter:- (pg_dump)
+
+U <username> or --username=<username>: Specifies the PostgreSQL username to connect with.
+
+h <hostname> or --host=<hostname> Specifies the host where the database server is running. 
+If set, the default is taken from the PGHOST environment variable.
+
+p <port> or --port=<port> Specifies the port to use for the connection to the database. 
+If set, the default value is read from the PGPORT environment variable.
+
+d <dbname> or --dbname=*dbname*: Specifies the name of the database to dump. <dbname> can also be a connection string.
+
+F <format> or --format=<format>: Specifies the file format for the export. Common values include:
+t or text: For an SQL-like plain text script (default option).
+c or custom: For a custom format.
+d or directory: For the directory format suitable for input into pg_restore.
+t or tar: For the tar archive directory format suitable for input into pg_restore.
+
+f <filename> or --file=<filename>: Specifies the name of the output file.
+
+t <pattern> or --table=<pattern>: Dumps only the tables specified by the given pattern.
+
+T <pattern> or --exclude-table=<*pattern*>: Excludes the tables identified by the specified pattern from the dump.
+
+n <pattern> or --schema=<pattern>: Dumps only the schemas matching the pattern.
+
+a or --data-only: Dumps only the data, not the schema.
+
+s or --schema-only: Exports only the schema, not the data.
+
+c or --clean: Adds SQL commands to drop database objects before recreating them.
+
+C or --create: Adds SQL commands to create the database.
+-inserts: Dumps data as INSERT commands rather than COPY instructions.
+-no-password: Skips the password prompt by assuming that no password is required.
+
+
+-------------------------------------------------------------------------------------------------------------------------------------------------
+pg_dump all:- 
+
+Global Dump Parameters
+-g or --globals-only
+
+Description: Dump only global objects (roles, tablespaces, etc.), not the actual database contents.
+Usage: pg_dumpall -g
+
+--no-role-passwords
+
+Description: Do not dump passwords for roles. This is useful if you plan to recreate roles without setting passwords.
+Usage: pg_dumpall --no-role-passwords
+
+--no-owner
+
+
+Description: Skip ownership information for tables and other objects.
+Usage: pg_dumpall --no-owner
+Data Dump Options
+
+
+-c or --clean
+
+Description: Include commands to clean (drop) databases before recreating them.
+Usage: pg_dumpall -c
+
+
+--if-exists
+
+Description: Use conditional DROP commands (DROP ... IF EXISTS).
+Usage: pg_dumpall --if-exists
+
+
+-r or --roles-only
+
+Description: Dump only roles, not any other global objects or database contents.
+Usage: pg_dumpall -r
+
+-t or --tablespaces-only
+
+Description: Dump only tablespaces, not any other global objects or database contents.
+Usage: pg_dumpall -t
+
+
+Output Formatting
+
+--quote-all-identifiers
+
+Description: Quote all identifiers, even if not necessary.
+Usage: pg_dumpall --quote-all-identifiers
+
+
+--disable-dollar-quoting
+
+Description: Disable the use of dollar quoting for function bodies.
+Usage: pg_dumpall --disable-dollar-quoting
+
+--disable-triggers
+
+Description: Disable triggers during data restore.
+Usage: pg_dumpall --disable-triggers
+Connection Parameters
+
+
+--dbname
+
+Description: Specifies the name of the database to connect to.
+Usage: pg_dumpall --dbname=postgres
+
+
+--username
+
+Description: User name to connect as.
+Usage: pg_dumpall --username=username
+
+--no-password
+
+Description: Never prompt for a password.
+Usage: pg_dumpall --no-password
+
+
+--password
+
+Description: Force a password prompt (same as -W).
+Usage: pg_dumpall --password
