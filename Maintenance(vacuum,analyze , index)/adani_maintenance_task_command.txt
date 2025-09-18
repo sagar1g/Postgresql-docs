@@ -1,0 +1,123 @@
+-- Generate REINDEX commands for all schemas
+SELECT 'REINDEX index ' || schemaname || '.' || indexname || ';' FROM pg_indexes;
+ 
+SELECT 'REINDEX INDEX ' || schemaname || '.' || indexname || ';'
+FROM pg_indexes
+WHERE schemaname NOT IN ('pg_catalog', 'information_schema');
+ 
+ =====================================================================================
+-- Generate VACUUM commands for all schemas
+SELECT 'VACUUM ' || schemaname || '.' || tablename || ';' FROM pg_tables;
+ 
+SELECT 'VACUUM ' || schemaname || '.' || tablename || ';'
+FROM pg_tables
+WHERE schemaname NOT IN ('pg_catalog', 'information_schema');
+ 
+ ======================================================
+-- Generate ANALYZE commands for all schemas
+SELECT 'ANALYZE ' || schemaname || '.' || tablename || ';' FROM pg_tables;
+SELECT 'ANALYZE ' || schemaname || '.' || tablename || ';'
+FROM pg_tables
+WHERE schemaname NOT IN ('pg_catalog', 'information_schema');
+ 
+ =====================================================
+ 
+SELECT 'ANALYZE ' || schemaname || '.' || tablename || ';'
+FROM pg_tables
+WHERE schemaname IN ('archive', 'jobs', 'master', 'mis', 'partman', 'pgagent', 'public', 'sso', 'temp', 'trans');
+
+
+======================================================================
+
+SELECT 'ANALYZE ' || schemaname || '.' || tablename || ';'
+FROM pg_tables
+WHERE schemaname NOT IN ('pg_catalog', 'information_schema');
+
+COPY (
+  SELECT 'ANALYZE ' || schemaname || '.' || tablename || ';'
+FROM pg_tables
+WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
+) TO '/data/output_file.csv' WITH (FORMAT csv, HEADER);
+
+
+
+SELECT 'ANALYZE ' || schemaname || '.' || tablename || ';' 
+FROM pg_tables 
+WHERE schemaname IN ('archive');
+
+SELECT 'ANALYZE ' || schemaname || '.' || tablename || ';' 
+FROM pg_tables 
+WHERE schemaname IN ('jobs');
+
+SELECT 'ANALYZE ' || schemaname || '.' || tablename || ';' 
+FROM pg_tables 
+WHERE schemaname IN ('master');
+
+SELECT 'ANALYZE ' || schemaname || '.' || tablename || ';' 
+FROM pg_tables 
+WHERE schemaname IN ('mis');
+
+SELECT 'ANALYZE ' || schemaname || '.' || tablename || ';' 
+FROM pg_tables 
+WHERE schemaname IN ('partman');
+
+SELECT 'ANALYZE ' || schemaname || '.' || tablename || ';' 
+FROM pg_tables 
+WHERE schemaname IN ('pgagent');
+
+SELECT 'ANALYZE ' || schemaname || '.' || tablename || ';' 
+FROM pg_tables 
+WHERE schemaname IN ('public');
+
+SELECT 'ANALYZE ' || schemaname || '.' || tablename || ';' 
+FROM pg_tables 
+WHERE schemaname IN ('sso');
+
+
+SELECT 'ANALYZE ' || schemaname || '.' || tablename || ';' 
+FROM pg_tables 
+WHERE schemaname IN ('temp');
+
+SELECT 'ANALYZE ' || schemaname || '.' || tablename || ';' 
+FROM pg_tables 
+WHERE schemaname IN ('trans');
+
+
+SELECT schemaname, MAX(last_analyze) AS last_analyze
+FROM pg_stat_all_tables WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
+GROUP BY schemaname
+ORDER BY schemaname;
+
+
+===============================================
+to see analyze completed or not:- 
+
+SELECT schemaname, relname, last_analyze FROM pg_stat_all_tables WHERE schemaname IN ('archive', 'jobs')ORDER BY schemaname, relname;
+
+
+==============================================================
+To see cron history of praticular job:- 
+
+SELECT j.jobid, j.schedule, j.command, j.active, r.status, r.start_time, r.end_time, r.return_message
+FROM cron.job j
+LEFT JOIN cron.job_run_details r ON j.jobid = r.jobid
+WHERE j.jobid = 40
+ORDER BY r.start_time DESC
+LIMIT 1;
+
+
+
+SELECT j.jobid, j.schedule, j.command, r.status, r.start_time, r.end_time, r.return_message
+FROM cron.job j
+LEFT JOIN cron.job_run_details r ON j.jobid = r.jobid
+WHERE j.jobid = 40
+ORDER BY r.start_time DESC
+LIMIT 40;
+
+
+
+SELECT jobid, status, start_time, end_time, return_message
+FROM cron.job_run_details
+WHERE jobid = 40
+ORDER BY end_time DESC
+LIMIT 10;

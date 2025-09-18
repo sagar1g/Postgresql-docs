@@ -1,0 +1,42 @@
+d_1f02f1ad80000521: This could be an automatically generated or system-generated name for the index. 
+Index names in PostgreSQL can be automatically generated if they are not explicitly specified during index creation.
+
+ SELECT  *  FROM dm_jms_config_rv VN_ , dm_jms_config_sv UN_  WHERE (UN_.r_object_id=$  AND UN_.r_object_id=VN_.r_object_id) ORDER BY VN_.r_object_id,VN_.i_position
+
+
+
+ schemaname |   tablename
+------------+----------------
+ EDMS       | adm_turbo_size
+ EDMS       | dm_proc_log
+ EDMS       | dmi_object
+ EDMS       | lookup_holder
+ -------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 
+VACUUM process:-
+This is the most common type of VACUUM and is performed 
+It reclaims space and optimizes the table by removing dead rows (rows that are no longer needed) and marking space as available for future data storage. 
+It also updates table statistics, 
+which is important for query optimization.
+
+command:-
+select 'VACUUM VERBOSE ANALYZE ' ||relname|| ';' from pg_stat_all_tables where relname not like 'pg_%' and n_dead_tup > 0;
+
+
+VACUUM FULL Process:-
+This is the most resource-intensive type of VACUUM. It reclaims space and compacts the table by creating a new copy of the table and its indexes, 
+then swapping them with the old ones. 
+It is used when significant space reclamation is needed but should be used sparingly due to its impact on database performance and downtime.
+
+command:-
+select 'VACUUM FULL VERBOSE ANALYZE ' ||relname|| ';' from pg_stat_all_tables where relname not like 'pg_%' and n_dead_tup > 0;
+
+Note:-
+In your case, with an 88 GB database, 
+you should ensure that you have at least 88 GB of free disk space available on the partition where your PostgreSQL data directory resides.
+
+select relname, n_live_tup, n_dead_tup
+from pg_stat_all_tables where relname not like 'pg_%' and n_dead_tup > 0
+group by 1, 2, 3
+order by 2, 3 desc;
+

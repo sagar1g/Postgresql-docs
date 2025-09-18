@@ -1,0 +1,25 @@
+-------------For reindex:-
+
+Plf Schema Reindex:
+SELECT 'REINDEX index plf.' || indexname ||';' FROM pg_indexes WHERE schemaname IN ('plf');
+
+Plfaudit Schema Reindex:
+SELECT 'REINDEX index plfaudit.' || indexname ||';' FROM pg_indexes WHERE schemaname IN ('plfaudit');
+
+
+-------------For Vacuum:-
+
+vcuum script plf schema:
+SELECT 'vacuum  plf.' || tablename ||';' FROM pg_tables WHERE  schemaname IN ('plf');
+
+vcuum script  plfaudit schema:
+SELECT 'vacuum  plfaudit.' || tablename ||';' FROM pg_tables WHERE  schemaname IN ('plfaudit');
+
+
+-------------For Analyze:-
+
+gather stats script for plf schema:
+SELECT 'ANALYZE  plf.' || tablename ||';' FROM pg_tables WHERE  schemaname IN ('plf');
+
+gather stats script for plfaudit schema:
+SELECT 'ANALYZE  plfaudit.' || tablename ||';' FROM pg_tables WHERE  schemaname IN ('plfaudit');

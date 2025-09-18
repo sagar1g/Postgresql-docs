@@ -1,0 +1,39 @@
+PostgreSQL Maintenance Tool:-
+
+This shell script is designed to manage and monitor PostgreSQL databases. It includes 16 useful functions for database administration, monitoring, and optimization.
+
+Installation
+Download zip file: https://github.com/rashidov9797/PostgreSQL/archive/refs/heads/main.zip
+
+wget https://github.com/rashidov9797/PostgreSQL/archive/refs/heads/main.zip
+
+Make it executable: chmod +x maintenance.sh
+
+Run the script: ./maintenance.sh
+
+Features
+
+Version Info
+Schema List
+Active Sessions
+Lock List
+Dead Tuple List
+Tablespace Info
+Top 15 Queries
+Vacuum Info
+Commit & Hit Ratio
+Replication Delay
+Object Count by Schema
+Index Usage Statistics
+Unused Indexes
+Long Running Queries
+Vacuum Info
+Switch Database/User
+
+Usage
+
+When prompted with Select an option:, enter a number between 1 and 16.
+
+Use 99 to exit the script.
+
+Switch Database/User: Allows switching between databases and users.
