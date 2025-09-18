@@ -1,0 +1,60 @@
+**********************streaming replication***************************
+Environment deatiles:- 
+primary server:- 10.20.30.40
+standby server:- 01.20.30.41
+replication mode:- async
+
+step1:-
+update pg_hba conf file on primary server:-
+
+ipv4:-
+host   all     all   01.20.30.41/24   md5
+
+replication:-
+host  replication all 01.20.30.41/24   md5
+
+step 2:- update postgresql.conf file:-
+1.archive_mode=on
+2.archive_command = 'cp %p /u01/pgarchive/%f' or 'rsync -a %p /u01/pgarchive/%f' 
+3.max_wal_sender = 10
+4.wal_level = repllica
+5.wal_keep_segments = 50
+6.wal_log_hint = on
+7.host_standby = on
+8.listen_address = *
+
+step3:- on standby server:-
+
+1.delete data directory 
+
+2. stop postgres service
+
+3.Run pg_basebackup to clone the standby instance
+Pg_basebackup -h <master ip> -U repuser -p 5432 -D $PGDATA -Fp -Xs -P -R -C -S pgstandby
+       -h =host
+       -U = user
+      -p = Port
+       -D = data directory
+      -F = format (plain or tar)
+       -p = plain
+     -X  = wal method ( none || fetch || stream)
+      -s = stream
+    -P  = Progress
+    -R = write configuration for replication.
+    -C = Creation of replication slot named by the -S option
+   -S  = name of the replication slot.
+
+step4:- start postgres service on standby
+
+step 5:-verfiy:-
+
+primary :- 
+select * from pg_stat_replication;
+
+standby :- 
+select * from pg_stat_wal_receiver;
+
+lag:- 
+
+select now() -pg_last_xact_replay_timestamp() as replication_lag;
+
