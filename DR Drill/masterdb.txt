@@ -1,0 +1,32 @@
+master
+
+root@master-db:~# ps -ef|grep postgres
+postgres    8525       1  0 Aug17 ?        00:59:52 /usr/lib/pgsql-15.3/bin/postgres -D /application/postgresql-15/data
+postgres    8526    8525  3 Aug17 ?        1-17:04:22 postgres: logger
+postgres    8527    8525  0 Aug17 ?        00:58:55 postgres: checkpointer
+postgres    8528    8525  0 Aug17 ?        00:05:20 postgres: background writer
+postgres    8588    8525  0 Aug17 ?        00:11:29 postgres: walwriter
+postgres    8589    8525  0 Aug17 ?        00:00:59 postgres: autovacuum launcher
+postgres    8590    8525  0 Aug17 ?        00:01:13 postgres: archiver last was 0000000100000227000000B2
+postgres    8591    8525  0 Aug17 ?        00:00:00 postgres: pg_partman master background worker
+postgres    8592    8525  0 Aug17 ?        00:02:31 postgres: pg_cron launcher
+postgres    8593    8525  0 Aug17 ?        00:00:41 postgres: logical replication launcher
+postgres    8720    8525  0 Aug17 ?        00:14:11 postgres: walsender postgres 172.25.4.8(46058) streaming 227/B30ED840
+postgres 3252220    8525  0 22:27 ?        00:00:00 postgres: vasudev masterdata 10.212.134.201(62771) idle
+postgres 3254285    8525  0 22:29 ?        00:00:00 postgres: gururaj masterdata 10.212.134.202(65327) idle
+postgres 3254289    8525  0 22:29 ?        00:00:00 postgres: gururaj masterdata 10.212.134.202(65328) idle
+postgres 3254388    8525  0 22:29 ?        00:00:00 postgres: gururaj masterdata 10.212.134.202(65345) idle
+postgres 3270038    8525  0 22:53 ?        00:00:00 postgres: mdm_deployment masterdata 172.25.2.14(39588) idle
+postgres 3270229 3270225  0 22:54 ?        00:00:00 /bin/sh -c sh role_refresh.sh >> refresh.log
+postgres 3270233 3270229  0 22:54 ?        00:00:00 sh role_refresh.sh
+postgres 3270281 3270233  0 22:54 ?        00:00:00 [psql]
+root     3270283 3270199  0 22:54 pts/1    00:00:00 grep --color=auto postgres
+postgres 3378583    8525  0 Sep18 ?        00:05:46 postgres: walsender postgres 172.26.2.5(34580) streaming 227/B30ED840
+
+/usr/lib/pgsql-15.3/bin/pg_ctl -D /application/postgresql-15/data promote
+
+
+/usr/lib/pgsql-15.3/bin/pg_ctl -D /data/postgresql-15/data  start
+
+
+systemctl status   postgresql.service

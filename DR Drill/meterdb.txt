@@ -1,0 +1,37 @@
+DR:- 
+
+postgres   92278       1  0 Aug01 ?        00:05:22 /usr/lib/pgsql-15.3/bin/postgres -D /data/postgresql-15/data
+postgres   92279   92278  0 Aug01 ?        00:02:35 postgres: logger
+postgres   92280   92278  0 Aug01 ?        01:38:18 postgres: checkpointer
+postgres   92281   92278  0 Aug01 ?        00:05:18 postgres: background writer
+postgres   92282   92278  0 Aug01 ?        03:03:06 postgres: startup recovering 00000001000001DC000000CC
+postgres  898632       1  0 Jul24 ?        00:00:01 SCREEN -S abc
+postgres  898633  898632  0 Jul24 pts/4    00:00:00 /bin/bash
+postgres 1024050       1  0 Jul24 ?        00:00:00 SCREEN -S abc
+postgres 1024051 1024050  0 Jul24 pts/6    00:00:00 /bin/bash
+postgres 1586229   92278  0 05:08 ?        00:04:20 postgres: walreceiver streaming 1DC/CCE95148
+root     2337764 2337758  0 22:21 pts/1    00:00:00 grep postgres
+
+
+
+/usr/lib/postgresql/14/bin/pg_ctl -D /application/postgresql-15/data promote
+
+
+master 
+
+postgres 3840019 3840017  0 Mar29 ?        00:00:05 postgres: 14/main: checkpointer
+postgres 3840020 3840017  0 Mar29 ?        00:01:51 postgres: 14/main: background writer
+postgres 3840021 3840017  0 Mar29 ?        00:01:49 postgres: 14/main: walwriter
+postgres 3840022 3840017  0 Mar29 ?        00:03:13 postgres: 14/main: autovacuum launcher
+postgres 3840023 3840017  0 Mar29 ?        00:00:24 postgres: 14/main: archiver
+postgres 3840024 3840017  0 Mar29 ?        00:03:15 postgres: 14/main: stats collector
+postgres 3840025 3840017  0 Mar29 ?        00:00:08 postgres: 14/main: logical replication launcher
+postgres 3840039       1  0 Mar29 ?        09:04:12 /usr/lib/pgsql-15.3/bin/postgres -D /application/postgresql-15/data
+postgres 3840040 3840039  0 Mar29 ?        1-05:08:07 postgres: logger
+postgres 4021699 3677222  0 Mar22 ?        00:00:00 tail -f last_timestamp_2024-03-22.txt
+
+
+ /usr/lib/pgsql-15.3/bin/pg_ctl -D /application/postgresql-15/data promote
+
+
+systemctl status postgresql.service

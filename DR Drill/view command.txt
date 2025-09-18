@@ -1,0 +1,74 @@
+to see particular user view permission
+
+SELECT 
+    c.relname AS view_name,
+    pg_catalog.pg_get_userbyid(c.relowner) AS owner,
+    COALESCE((
+        SELECT string_agg(acl::text, ', ')
+        FROM (
+            SELECT unnest(c.relacl) AS acl
+        ) AS acl_list
+        WHERE acl::text LIKE 'ganeshkale.ext=%'  -- Replace 'finappuser' with actual username
+    ), 'No specific permissions for user') AS user_permissions
+FROM 
+    pg_class c
+JOIN 
+    pg_namespace n ON n.oid = c.relnamespace
+WHERE 
+    c.relkind = 'v'  -- 'v' stands for view
+    AND c.relname = 'vw_profectus_hunter_live'
+    AND n.nspname = 'plfsnap';
+
+
+
+to see owner of view 
+
+SELECT 
+    c.relname AS view_name,
+    pg_catalog.pg_get_userbyid(c.relowner) AS owner
+FROM 
+    pg_class c
+JOIN 
+    pg_namespace n ON n.oid = c.relnamespace
+WHERE 
+    c.relkind = 'v'  -- 'v' stands for view
+    AND c.relname = 'vw_profectus_hunter_live'  -- Replace with your view name
+    AND n.nspname = 'plfsnap';  -- Replace with your schema name
+
+
+
+SELECT 
+    grantee, 
+    privilege_type 
+FROM 
+    information_schema.schema_privileges 
+WHERE 
+    schema_name = 'plfsnap';
+	
+	
+Public and Plfsnap
+
+
+SELECT 
+    grantee, 
+    table_schema, 
+    table_name, 
+    privilege_type
+FROM 
+    information_schema.role_table_grants
+WHERE 
+    grantee = 'pradyumna.shivtare'
+    AND table_schema = 'public';
+	
+
+
+
+GRANT select ON ALL TABLES IN SCHEMA "public" TO "pradyumna.shivtare";
+
+SELECT grantee, privilege_type
+FROM information_schema.role_schema_grants
+WHERE grantee = 'pradyumna.shivtare'
+  AND schema_name = 'public';
+  
+ALTER DEFAULT PRIVILEGES IN SCHEMA "plfsnap"
+GRANT SELECT ON TABLES TO "pradyumna.shivtare";

@@ -1,0 +1,115 @@
+SELECT table_name, table_owner
+FROM information_schema.tables
+WHERE table_name = 'vw_profectus_hunter_live';
+
+
+
+
+ALTER VIEW plfsnap.vw_profectus_hunter_live OWNER TO finappuser;
+
+
+GRANT ALL PRIVILEGES  ON SCHEMA "plfsnap" TO "finappuser";
+
+
+SELECT 
+    grantee, 
+    table_schema, 
+    table_name, 
+    privilege_type
+FROM 
+    information_schema.role_table_grants
+WHERE 
+    grantee = 'finappuser'
+	AND table_schema = 'plfsnap'
+	table_name = 'vw_profectus_hunter_live';
+	
+	
+	
+	SELECT 
+    grantee,
+    privilege_type
+FROM 
+    information_schema.role_table_grants
+WHERE 
+    table_name = 'vw_profectus_hunter_live' AND 
+    table_schema = 'plfsnap';
+	
+	
+SELECT 
+    grantee, 
+    privilege_type 
+FROM 
+    information_schema.schema_privileges 
+WHERE 
+    schema_name = 'plfsnap';
+
+
+SELECT 
+    n.nspname AS schema_name,
+    pg_catalog.pg_get_userbyid(n.nspowner) AS owner,
+    nspacl
+FROM 
+    pg_namespace n
+WHERE 
+    n.nspname = 'plfsnap'
+	and nspacl = 'finappuser';
+
+
+SELECT 
+    c.relname AS view_name, 
+    pg_catalog.pg_get_userbyid(c.relowner) AS owner,
+    c.relacl AS access_privileges
+FROM 
+    pg_class c
+JOIN 
+    pg_namespace n ON n.oid = c.relnamespace
+WHERE 
+    c.relkind = 'v'  -- 'v' stands for view
+    AND c.relname = 'vw_profectus_hunter_live'
+    AND n.nspname = 'plfsnap';
+
+
+
+SELECT 
+    c.relname AS view_name, 
+    pg_catalog.pg_get_userbyid(c.relowner) AS owner,
+    c.relacl AS access_privileges,
+    CASE 
+        WHEN c.relacl IS NULL THEN 'No permissions granted'
+        ELSE (
+            SELECT string_agg(acl, ', ')
+            FROM (
+                SELECT unnest(c.relacl) AS acl
+                WHERE acl ~ 'finappuser'  -- Replace 'username' with the actual user
+            ) AS acl_list
+        )
+    END AS user_permissions
+FROM 
+    pg_class c
+JOIN 
+    pg_namespace n ON n.oid = c.relnamespace
+WHERE 
+    c.relkind = 'v'  -- 'v' stands for view
+    AND c.relname = 'vw_profectus_hunter_live'
+    AND n.nspname = 'plfsnap';
+
+
+
+SELECT 
+    c.relname AS view_name,
+    pg_catalog.pg_get_userbyid(c.relowner) AS owner,
+    COALESCE((
+        SELECT string_agg(acl::text, ', ')
+        FROM (
+            SELECT unnest(c.relacl) AS acl
+        ) AS acl_list
+        WHERE acl::text LIKE 'finappuser'  -- Replace 'finappuser' with actual username
+    ), 'No specific permissions for user') AS user_permissions
+FROM 
+    pg_class c
+JOIN 
+    pg_namespace n ON n.oid = c.relnamespace
+WHERE 
+    c.relkind = 'v'  -- 'v' stands for view
+    AND c.relname = 'vw_profectus_hunter_live'
+    AND n.nspname = 'plfsnap';

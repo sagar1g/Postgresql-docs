@@ -1,0 +1,56 @@
+Master:- 
+
+postgres  853883       1  0 Sep13 ?        00:29:06 /usr/lib/postgresql/14/bin/postgres -D /data/pgsql/14/data
+postgres  853890  853883  0 Sep13 ?        00:00:02 postgres: logger
+postgres  853898  853883  0 Sep13 ?        00:40:23 postgres: checkpointer
+postgres  853899  853883  0 Sep13 ?        00:09:43 postgres: background writer
+postgres  853900  853883  0 Sep13 ?        00:05:15 postgres: walwriter
+postgres  853901  853883  0 Sep13 ?        00:00:58 postgres: autovacuum launcher
+postgres  853902  853883  0 Sep13 ?        00:00:48 postgres: archiver last was 000000010000021A000000EC
+postgres  853903  853883  0 Sep13 ?        00:35:56 postgres: stats collector
+postgres  853904  853883  0 Sep13 ?        00:01:30 postgres: pg_cron launcher
+
+/usr/lib/postgresql/14/bin/pg_ctl -D /data/pgsql/14/data status 
+
+/usr/lib/postgresql/14/bin/pg_ctl -D /data/pgsql/14/data stop
+
+/usr/lib/postgresql/14/bin/pg_ctl -D /data/pgsql/14/data start
+
+touch standby.signal
+
+/usr/lib/postgresql/14/bin/pg_ctl -D /data/pgsql/14/data promote
+
+
+
+
+
+dr:- 
+
+postgres 3825840       1  0 Sep13 ?        00:03:23 /usr/lib/postgresql/14/bin/postgres -D /data/pgsql/14/data
+postgres 3825853 3825840  0 Sep13 ?        00:02:35 postgres: logger
+postgres 3825854 3825840  0 Sep13 ?        01:07:36 postgres: startup recovering 000000010000021A000000F0
+postgres 3825855 3825840  0 Sep13 ?        00:42:27 postgres: checkpointer
+postgres 3825856 3825840  0 Sep13 ?        00:03:54 postgres: background writer
+postgres 3825857 3825840  0 Sep13 ?        00:12:32 postgres: stats collector
+
+
+primary_conninfo = 'user=postgres passfile=''/var/lib/postgresql/.pgpass'' channel_binding=prefer host=172.25.4.2 port=6412 sslmode=prefer sslcompression=0 sslcertmode=allow sslsni=1 ssl_min_protocol_version=TLSv1.2 gssencmode=prefer krbsrvname=postgres gssdelegation=0 target_session_attrs=any load_balance_hosts=disable'
+
+/usr/lib/postgresql/14/bin/pg_ctl -D /data/pgsql/14/data stop
+
+/usr/lib/postgresql/14/bin/pg_ctl -D /data/pgsql/14/data start
+
+/usr/lib/postgresql/14/bin/pg_ctl -D /data/pgsql/14/data promote
+
+SELECT pg_promote();
+
+SELECT pg_is_in_recovery();
+
+select now() -pg_last_xact_replay_timestamp() as replication_lag;
+
+select * from pg_stat_wal_receiver;
+
+
+scp 000000010000021B00000030 infra.mg@172.25.4.2:/home/infra.mg
+
+
