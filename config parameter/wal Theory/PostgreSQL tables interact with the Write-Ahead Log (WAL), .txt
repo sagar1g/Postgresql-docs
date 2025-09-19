@@ -1,0 +1,30 @@
+🔹 1. Logged Tables (Default)
+Behavior: All changes are written to the WAL.
+
+Purpose: Ensures crash recovery — data changes survive server restarts.
+
+Advantages: Data durability and crash safety.
+
+Usage example:
+
+sql
+Copy
+Edit
+CREATE TABLE my_table (...);
+🔹 2. Unlogged Tables
+Behavior: Changes are not written to the WAL.
+
+Consequence: On crash or restart, table contents are lost.
+
+Advantages: Faster write performance since there's no WAL overhead.
+
+Usage example:
+
+sql
+Copy
+Edit
+CREATE UNLOGGED TABLE temp_results (...);
+✅ When to Use Unlogged Tables?
+For temporary data or intermediate processing where durability is not critical.
+
+Great for performance-intensive operations like batch inserts.
