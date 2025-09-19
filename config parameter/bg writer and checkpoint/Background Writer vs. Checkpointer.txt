@@ -1,0 +1,20 @@
+Background Writer vs. Checkpointer
+
+Both the background writer and checkpointer write modified data from memory to disk, but they serve different purposes.
+
+Background Writer Process
+
+• The Background Writer helps reduce the work of the Checkpointer by writing dirty pages to disk incrementally.
+• It prevents system slowdowns when the checkpoint process runs.
+• The number of pages it writes is controlled by bgwriter_lru_maxpages and bgwriter_lru_multiplier.
+• It reduces the amount of disk activity during a checkpoint.
+• It keeps the shared buffer ready for new data.
+
+Checkpointer Process
+
+• The Checkpointer ensures data is safely stored by periodically writing all dirty pages to disk.
+• It makes sure that all WAL (Write-Ahead Log) records before a checkpoint are securely saved.
+• It runs at set time intervals (checkpoint_timeout) or when WAL size reaches a limit (max_wal_size).
+• It writes all modified pages to disk and marks a checkpoint in the WAL.
+• In case of a crash, PostgreSQL only needs to replay WAL from the last checkpoint.
+• It can cause high disk usage if too many dirty pages are written at once.
