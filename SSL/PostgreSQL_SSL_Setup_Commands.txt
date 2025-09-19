@@ -1,0 +1,53 @@
+
+541  su - postgres
+542  make clean
+543  ./configure --prefix=/usr/lib/pgsql-15.6 --with-ldap --with-libxml --with-libxslt --with-openssl --with-uuid=e2fs
+544  make && make install
+545  cd contrib/
+546  make && make install
+547  ls -lrth
+548  git clone https://github.com/pgpartman/pg_partman.git
+549  git clone https://github.com/citusdata/pg_cron.git
+550  chown postgres:postgres /postgres -R
+551  su - postgres
+552  cd /
+553  ls -lrth
+554  cd postgres/
+555  su - postgers
+556  su - postgres
+557  cd /usr/lib
+558  cd pgsql-15.6
+559  ls -lrth
+560  cd share/
+561  ls -lrth
+562  cd extension/
+563  ls -lrth
+564  cd ..
+565  chown postgres:postgres pgsql-15.6 -R
+566  cd /data/
+567  ls -lrth
+568  mkdir ssl
+569  cd /etc/ssl
+570  ls -lrth
+571  cd certs/
+572  ls -lrth ssl-cert-snakeoil.pem*
+573  cp -pvr ssl-cert-snakeoil.pem /mnt/data/ssl/
+574  cd ..
+575  cd private/
+576  ls -lrth
+577  cp -pvr ssl-cert-snakeoil.key /data/ssl/
+578  cd /data/ssl/
+579  ls -lrth
+580  cd ..
+581  chown postgres:postgres ssl -R
+582  chmod 750 ssl
+583  cd ssl
+584  ls -lrth
+585  chmod 0600 *
+586  cd /data/patroni/
+587  vi postgresql.base.conf
+588  su - postgres
+589  cd ~
+590  systemctl status patroni.service
+591  systemctl stop patroni.service
+592  systemctl start patroni.service

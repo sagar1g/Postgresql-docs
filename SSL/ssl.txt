@@ -1,0 +1,77 @@
+location /etc/ssl ---------------(1)
+
+chown postgres:postgres ssl ------------------(2)
+
+chmod 750 ssl -------------------------(3)
+
+cd /etc/ssl -------------------------(4)
+
+ 
+chown postgres:postgres /etc/ssl/private -----------------(5)
+chown postgres:postgres /etc/ssl/certs --------------------(6)
+
+chown postgres:postgres private -R --------------------(7)
+chown postgres:postgres certs -R  -----------------------(8)
+
+
+chmod 0600 /etc/ssl/certs/ssl-cert-snakeoil.pem* -------------------(9)
+
+==========================================================================================================================================================
+
+Permission:- 
+
+key permission:- chmod 600 /mars_db/postgresql-15.6/ssl/new_ssl/star_heintra_in_10092023_key
+cer permission:- chmod 644 /mars_db/postgresql-15.6/ssl/new_ssl/star_heintra_in.cer
+  chown postgres:postgres /mars_db/postgresql-15.6/ssl/new_ssl/star_heintra_in_*
+
+===========================================================================================================================================================================
+
+
+postgres=# show ssl_cert_file;
+          ssl_cert_file
+---------------------------------
+ /data/ssl/ssl-cert-snakeoil.pem
+(1 row)
+
+postgres=# show ssl_key_file;
+          ssl_key_file
+---------------------------------
+ /data/ssl/ssl-cert-snakeoil.key
+(1 row)
+
+postgres=#
+
+
+private key file "/etc/ssl/private/ssl-cert-snakeoil.key" has group or world access
+DETAIL:  File must have permissions u=rw (0600) or less if owned by the database user, or permissions u=rw,g=r (0640) or less if owned by root.
+
+
+
+======================================================================================================================================================================
+
+how create ssl certificat:- 
+
+1.sudo apt-get install openssl   # On Ubuntu/Debian
+sudo yum install openssl       # On CentOS/RHEL
+
+2.openssl genrsa -out server.key 2048
+
+3.openssl req -new -key server.key -out server.csr
+
+4.openssl x509 -req -in server.csr -signkey server.key -out server.crt -days 365
+
+======================================================================================================================================================================
+
+could not load private key file "/mars_db/postgresql-15.6/ssl/new_ssl/star_heintra_in_10092023_key": key values mismatch :- 
+
+openssl x509 -noout -modulus -in /mars_db/postgresql-15.6/ssl/new_ssl/star_heintra_in.cer | openssl md5
+
+openssl rsa -noout -modulus -in /mars_db/postgresql-15.6/ssl/new_ssl/star_heintra_in_10092023_key | openssl md5
+
+If both are match then file is not corrupted
+
+=========================================================================================================================================================================
+
+
+
+

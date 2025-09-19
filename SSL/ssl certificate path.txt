@@ -1,0 +1,37 @@
+#ssl = on
+#ssl_ca_file = ''
+#ssl_cert_file = '/etc/ssl/certs/ssl-cert-snakeoil.pem'
+#ssl_crl_file = ''
+#ssl_crl_dir = ''
+#ssl_key_file = '/etc/ssl/private/ssl-cert-snakeoil.key'
+
+
+ssl cretificate create:- 
+
+1.Key:- 
+openssl genrsa -out server.key 2048
+
+2.certificate:- 
+
+ openssl req -new -x509 -days 3650 -key server.key -out server.crt
+
+##############################################################
+
+location /etc
+
+1.chown postgres:postgres ssl
+2.chmod 750 ssl
+
+3.cd /etc/ssl
+
+4. 
+chown postgres:postgres /etc/ssl/private
+chown postgres:postgres /etc/ssl/certs
+
+chown postgres:postgres private -R
+chown postgres:postgres certs -R
+
+5.
+chmod 0600 /etc/ssl/certs/ssl-cert-snakeoil.pem*
+
+

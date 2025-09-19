@@ -1,0 +1,29 @@
+go to folder where postgresql package store:- 
+
+sudo apt-get install -y libssl-dev
+
+1.make clean 
+
+2. ./configure --prefix=/usr/lib/pgsql-15.6.0 --with-openssl --with-ldap --with-libxml --with-libxslt --with-openssl --with-uuid=e2fs 
+
+3.  make && make install
+
+4 go to contrib :- 
+
+make && make install
+
+5.file permission:- 
+
+chmod 750 ssl -----------ssl directory
+
+chmod 0600 /etc/ssl/certs/ssl-cert-snakeoil.pem*
+
+6.postgres.conf:- 
+
+#ssl = on
+#ssl_ca_file = ''
+#ssl_cert_file = '/etc/ssl/certs/ssl-cert-snakeoil.pem'
+#ssl_crl_file = ''
+#ssl_crl_dir = ''
+#ssl_key_file = '/etc/ssl/private/ssl-cert-snakeoil.key'
+
