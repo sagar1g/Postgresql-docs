@@ -1,0 +1,61 @@
+
+### PostgreSQL Partitioning Guide for `sales` Table
+
+**Step 1: Create Partitioned Table**
+
+CREATE TABLE sales_partitioned (
+    sale_id SERIAL PRIMARY KEY,
+    customer_id INTEGER,
+    product_id INTEGER,
+    amount NUMERIC(10, 2),
+    sale_date DATE NOT NULL
+) PARTITION BY RANGE (sale_date);
+
+
+**Step 2: Create Monthly Partitions**
+
+-- January 2021 Partition
+CREATE TABLE sales_2021_01 PARTITION OF sales_partitioned
+FOR VALUES FROM ('2021-01-01') TO ('2021-02-01');
+
+-- February 2021 Partition
+CREATE TABLE sales_2021_02 PARTITION OF sales_partitioned
+FOR VALUES FROM ('2021-02-01') TO ('2021-03-01');
+
+-- Repeat for all months...
+
+
+**Step 3: Migrate Data from `sales` to `sales_partitioned`**
+
+
+INSERT INTO sales_partitioned (sale_id, customer_id, product_id, amount, sale_date)
+SELECT sale_id, customer_id, product_id, amount, sale_date
+FROM sales;
+
+**Step 4: Verify Data Migration**
+
+
+SELECT COUNT(*) FROM sales;
+SELECT COUNT(*) FROM sales_partitioned;
+
+
+**Step 5: Handle New Data Inserts**
+
+
+INSERT INTO sales_partitioned (customer_id, product_id, amount, sale_date)
+VALUES (101, 202, 1500.00, '2023-05-10');
+
+
+**Step 6: Replace the Old Table (Optional)**
+
+
+DROP TABLE sales;
+ALTER TABLE sales_partitioned RENAME TO sales;
+
+### Important Considerations
+
+- Foreign Keys are not supported on partitioned parent tables.
+- Recreate triggers if necessary.
+- Always back up data before migration.
+
+**Note:** PostgreSQL will automatically route data to the correct partitions based on the `sale_date` range.
