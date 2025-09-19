@@ -1,0 +1,169 @@
+CREATE EXTENSION IF NOT EXISTS postgres_fdw
+    SCHEMA salary_processing
+    VERSION "1.0";
+
+==============================================================================================================================================================
+
+CREATE FOREIGN DATA WRAPPER postgres_fdw
+    VALIDATOR salary_processing.postgres_fdw_validator
+    HANDLER salary_processing.postgres_fdw_handler;
+
+ALTER FOREIGN DATA WRAPPER postgres_fdw
+    OWNER TO postgres;
+
+GRANT USAGE ON FOREIGN DATA WRAPPER postgres_fdw TO payroll_salary_processing_prod;
+GRANT USAGE ON FOREIGN DATA WRAPPER postgres_fdw TO postgres;
+GRANT USAGE ON FOREIGN DATA WRAPPER postgres_fdw TO sa_ecgc2;
+
+=================================================================================================================================================================
+
+CREATE SERVER cs_cs_db_fdw_server
+    FOREIGN DATA WRAPPER postgres_fdw
+    OPTIONS (dbname 'cs_cs_db', host '10.12.0.11', port '54032');
+
+ALTER SERVER cs_cs_db_fdw_server
+    OWNER TO sa_ecgc;
+GRANT USAGE ON FOREIGN SERVER cs_cs_db_fdw_server TO fdw_payroll_salary_processing_prod;
+GRANT USAGE ON FOREIGN SERVER cs_cs_db_fdw_server TO sa_ecgc;
+
+========================================================================================================================================================================================
+
+-- Foreign Server: hrd_emp_attend_leave_mgmt_db_fdw_server
+
+-- DROP SERVER IF EXISTS hrd_emp_attend_leave_mgmt_db_fdw_server
+
+CREATE SERVER hrd_emp_attend_leave_mgmt_db_fdw_server
+    FOREIGN DATA WRAPPER postgres_fdw
+    OPTIONS (dbname 'hrd_emp_attend_leave_mgmt_db', host '10.12.0.11', port '54032');
+
+ALTER SERVER hrd_emp_attend_leave_mgmt_db_fdw_server
+    OWNER TO sa_ecgc;
+GRANT USAGE ON FOREIGN SERVER hrd_emp_attend_leave_mgmt_db_fdw_server TO fdw_payroll_salary_processing_prod;
+GRANT USAGE ON FOREIGN SERVER hrd_emp_attend_leave_mgmt_db_fdw_server TO sa_ecgc;
+
+
+========================================================================================================================================================================================================
+
+-- Foreign Server: hrd_emp_loans_db_fdw_server
+
+-- DROP SERVER IF EXISTS hrd_emp_loans_db_fdw_server
+
+CREATE SERVER hrd_emp_loans_db_fdw_server
+    FOREIGN DATA WRAPPER postgres_fdw
+    OPTIONS (dbname 'hrd_emp_loans_db', host '10.12.0.11', port '54032');
+
+ALTER SERVER hrd_emp_loans_db_fdw_server
+    OWNER TO sa_ecgc;
+GRANT USAGE ON FOREIGN SERVER hrd_emp_loans_db_fdw_server TO fdw_payroll_salary_processing_prod;
+GRANT USAGE ON FOREIGN SERVER hrd_emp_loans_db_fdw_server TO postgres;
+GRANT USAGE ON FOREIGN SERVER hrd_emp_loans_db_fdw_server TO sa_ecgc;
+
+===================================================================================================================================================================================================================
+
+-- Foreign Server: hrd_emp_mgmt_db_fdw_server
+
+-- DROP SERVER IF EXISTS hrd_emp_mgmt_db_fdw_server
+
+CREATE SERVER hrd_emp_mgmt_db_fdw_server
+    FOREIGN DATA WRAPPER postgres_fdw
+    OPTIONS (dbname 'hrd_emp_mgmt_db', host '10.12.0.11', port '54032');
+
+ALTER SERVER hrd_emp_mgmt_db_fdw_server
+    OWNER TO sa_ecgc;
+GRANT USAGE ON FOREIGN SERVER hrd_emp_mgmt_db_fdw_server TO fdw_payroll_salary_processing_prod;
+GRANT USAGE ON FOREIGN SERVER hrd_emp_mgmt_db_fdw_server TO sa_ecgc;
+
+
+====================================================================================================================================================================================================================
+
+-- Foreign Server: hrd_org_struct_db_fdw_server
+
+-- DROP SERVER IF EXISTS hrd_org_struct_db_fdw_server
+
+CREATE SERVER hrd_org_struct_db_fdw_server
+    FOREIGN DATA WRAPPER postgres_fdw
+    OPTIONS (dbname 'hrd_org_struct_db', host '10.12.0.11', port '54032');
+
+ALTER SERVER hrd_org_struct_db_fdw_server
+    OWNER TO sa_ecgc;
+GRANT USAGE ON FOREIGN SERVER hrd_org_struct_db_fdw_server TO fdw_payroll_salary_processing_prod;
+GRANT USAGE ON FOREIGN SERVER hrd_org_struct_db_fdw_server TO sa_ecgc;
+
+===========================================================================================================================================================================================
+
+CREATE SERVER pf_core_process_db_fdw_server
+    FOREIGN DATA WRAPPER postgres_fdw
+    OPTIONS (dbname 'pf_core_process_db', host '10.12.0.11', port '54032');
+
+ALTER SERVER pf_core_process_db_fdw_server
+    OWNER TO sa_ecgc;
+GRANT USAGE ON FOREIGN SERVER pf_core_process_db_fdw_server TO fdw_payroll_salary_processing_prod;
+GRANT USAGE ON FOREIGN SERVER pf_core_process_db_fdw_server TO sa_ecgc;
+
+
+==============================================================================================================================================================================================
+SELECT srvname, srvoptions
+FROM pg_foreign_server
+WHERE srvname IN (
+  'cs_cs_db_fdw_server',
+  'hrd_emp_attend_leave_mgmt_db_fdw_server',
+  'hrd_emp_loans_db_fdw_server',
+  'hrd_emp_mgmt_db_fdw_server',
+  'hrd_org_struct_db_fdw_server',
+  'pf_core_process_db_fdw_server'
+);
+
+
+srvname                                          srvoptions   
+"cs_cs_db_fdw_server"	                       "{dbname=cs_cs_db,host=172.16.34.25,port=5432}"
+"hrd_emp_attend_leave_mgmt_db_fdw_server"	"{dbname=hrd_emp_attend_leave_mgmt_db,host=172.16.34.25,port=5432}"
+"hrd_emp_loans_db_fdw_server"	           "{dbname=hrd_emp_loans_db,host=172.16.34.25,port=5432}"
+"hrd_emp_mgmt_db_fdw_server"	         "{dbname=hrd_emp_mgmt_db,host=172.16.34.25,port=5432}"
+"hrd_org_struct_db_fdw_server"	         "{dbname=hrd_org_struct_db,host=172.16.34.25,port=5432}"
+"pf_core_process_db_fdw_server"	       "{dbname=pf_core_process_db,host=172.16.34.25,port=5432}"
+
+
+
+
+
+
+
+
+
+
+
+
+===============================================================================================================================================================================================
+To change ip :-
+
+ALTER SERVER cs_cs_db_fdw_server
+    OPTIONS (SET host '10.189.8.160', SET port '54032');
+
+ALTER SERVER hrd_emp_attend_leave_mgmt_db_fdw_server
+    OPTIONS (SET host '10.189.8.160', SET port '54032');
+
+ALTER SERVER hrd_emp_loans_db_fdw_server
+    OPTIONS (SET host '10.189.8.160', SET port '54032');
+
+ALTER SERVER hrd_emp_mgmt_db_fdw_server
+    OPTIONS (SET host '10.189.8.160', SET port '54032');
+
+ALTER SERVER hrd_org_struct_db_fdw_server
+    OPTIONS (SET host '10.189.8.160', SET port '54032');
+
+ALTER SERVER pf_core_process_db_fdw_server
+    OPTIONS (SET host '10.189.8.160', SET port '54032');
+
+
+SELECT srvname, srvoptions
+FROM pg_foreign_server
+WHERE srvname IN (
+  'cs_cs_db_fdw_server',
+  'hrd_emp_attend_leave_mgmt_db_fdw_server',
+  'hrd_emp_loans_db_fdw_server',
+  'hrd_emp_mgmt_db_fdw_server',
+  'hrd_org_struct_db_fdw_server',
+  'pf_core_process_db_fdw_server'
+);
+
+
