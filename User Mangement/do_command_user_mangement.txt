@@ -1,0 +1,46 @@
+to provide premission all schema wise which are persent in database
+
+DO $$
+DECLARE
+    schema_rec RECORD;
+BEGIN
+    FOR schema_rec IN
+        SELECT schema_name
+        FROM information_schema.schemata
+        WHERE schema_name NOT IN ('pg_catalog', 'information_schema', 'pg_toast', 'pg_temp_1', 'pg_toast_temp_1')
+    LOOP
+        -- Grant statements for each role
+        EXECUTE format('GRANT USAGE ON SCHEMA %I TO rep_user;', schema_rec.schema_name);
+        EXECUTE format('GRANT USAGE ON SCHEMA %I TO replicator;', schema_rec.schema_name);
+        EXECUTE format('GRANT ALL ON SCHEMA %I TO sa_ecgc;', schema_rec.schema_name);
+        EXECUTE format('GRANT USAGE ON SCHEMA %I TO smile_backup_adm;', schema_rec.schema_name);
+        EXECUTE format('GRANT USAGE ON SCHEMA %I TO smile_mod;', schema_rec.schema_name);
+        EXECUTE format('GRANT USAGE ON SCHEMA %I TO smile_opr;', schema_rec.schema_name);
+    END LOOP;
+END $$;
+
+
+to provide premission all tabel-wise which are persent in database
+
+
+DO $$
+DECLARE
+    tbl RECORD;
+BEGIN
+    FOR tbl IN
+        SELECT table_schema, table_name
+        FROM information_schema.tables
+        WHERE table_type = 'BASE TABLE'
+          AND table_schema NOT IN ('pg_catalog', 'information_schema', 'pg_toast')
+    LOOP
+        -- SELECT privileges
+        EXECUTE format('GRANT SELECT ON TABLE %I.%I TO rep_user;', tbl.table_schema, tbl.table_name);
+        EXECUTE format('GRANT SELECT ON TABLE %I.%I TO replicator;', tbl.table_schema, tbl.table_name);
+        EXECUTE format('GRANT SELECT ON TABLE %I.%I TO smile_backup_adm;', tbl.table_schema, tbl.table_name);
+        EXECUTE format('GRANT SELECT ON TABLE %I.%I TO smile_mod;', tbl.table_schema, tbl.table_name);
+        EXECUTE format('GRANT SELECT ON TABLE %I.%I TO smile_opr;', tbl.table_schema, tbl.table_name);
+        
+        -- ALL privileges for sa_ecgc
+        EXECUTE format('GRANT ALL ON TABLE %I.%I TO sa_ecgc;', tbl.table_schema, tbl.table_name);
+    END LOOP;
+END $$;

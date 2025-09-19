@@ -1,0 +1,73 @@
+create role hes;
+
+create role read_role;
+grant usage on schema hes,bsmartframework to read_role;
+grant SELECT on ALL tables in schema hes,bsmartframework to read_role ;
+grant SELECT on ALL sequences in schema hes,bsmartframework to read_role ;
+
+create role write_role;
+ grant usage on schema hes,bsmartframework to write_role;
+grant INSERT,update,delete,select on ALL tables in schema hes,bsmartframework to write_role ;
+grant ALL on ALL sequences in schema hes,bsmartframework to write_role ;
+
+create role create_role;
+grant create on SCHEMA hes,bsmartframework to create_role;
+
+alter schema bsmartframework owner to hes;
+alter schema _bsmart_times owner to hes;
+
+
+-- change ownership of all tables/sequences
+DO $$
+DECLARE
+    tbl_schema TEXT;
+    tbl_name TEXT;
+BEGIN
+    FOR tbl_schema, tbl_name IN
+        SELECT schemaname, tablename
+        FROM pg_tables
+        WHERE schemaname IN ('hes','bsmartframework')
+        AND tableowner NOT IN ('hes')
+    LOOP
+        EXECUTE format(
+            'ALTER TABLE %I.%I OWNER TO hes',
+            tbl_schema, tbl_name
+        );
+    END LOOP;
+END $$;
+
+
+DO $$
+DECLARE
+    seq_schema TEXT;
+    seq_name TEXT;
+BEGIN
+    FOR seq_schema, seq_name IN
+        SELECT sequence_schema, sequence_name
+        FROM information_schema.sequences
+        WHERE sequence_schema IN ('hes','bsmartframework')
+    LOOP
+        EXECUTE format(
+            'ALTER SEQUENCE %I.%I OWNER TO hes',
+            seq_schema, seq_name
+        );
+    END LOOP;
+END $$;
+
+=============================================================================================================
+
+REVOKE USAGE ON SCHEMA "_bsmart_times", "bsmartframework", "bsmartframework", "bsmartlauncher", "chatsupport","hes","public" FROM "hes_deployment";
+REVOKE SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA "_bsmart_times", "bsmartframework", "bsmartframework", "bsmartlauncher", "chatsupport","hes","public" FROM "hes_deployment";
+REVOKE USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA "_bsmart_times", "bsmartframework", "bsmartframework", "bsmartlauncher", "chatsupport","hes","public" FROM "hes_deployment";
+ALTER DEFAULT PRIVILEGES IN SCHEMA "_bsmart_times", "bsmartframework", "bsmartframework", "bsmartlauncher", "chatsupport","hes","public" REVOKE SELECT, INSERT, UPDATE, DELETE ON TABLES FROM "hes_deployment";
+ALTER DEFAULT PRIVILEGES IN SCHEMA "_bsmart_times", "bsmartframework", "bsmartframework", "bsmartlauncher", "chatsupport","hes","public" REVOKE USAGE, SELECT, UPDATE ON SEQUENCES FROM "hes_deployment";
+
+
+SELECT 
+    n.nspname AS schema_name,
+    r.rolname AS grantee,
+    p.privilege_type
+FROM pg_namespace n
+LEFT JOIN LATERAL aclexplode(n.nspacl) p ON true
+LEFT JOIN pg_roles r ON p.grantee = r.oid
+ORDER BY n.nspname, r.rolname;

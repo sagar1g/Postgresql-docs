@@ -1,0 +1,17 @@
+enable audit log in postgresql:-
+
+step:-01:-
+vi /etc/postgresql/{version}/main/postgresql.conf
+
+step:-02:-
+logging_collector = on
+log_statement = 'all'
+log_directory = '/var/log/postgresql/'
+
+step03:-
+sudo mkdir /var/log/postgresql/
+
+step04:-
+sudo chown postgres:postgres /var/log/postgresql/
+
+find /Data/pg_archives -type f -name "*sep 12*"

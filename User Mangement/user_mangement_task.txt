@@ -1,0 +1,168 @@
+********************************user mangement**********************************
+
+1. In PostgreSQL, the TRUNCATE command is considered a powerful operation, and by default, only the owner of the table or a superuser can execute it.
+
+2.
+SELECT grantee, table_schema, table_name, privilege_type
+FROM information_schema.role_table_grants
+WHERE grantee = 'nehajadhav.ext';
+
+3.view permission:- 
+
+SELECT 
+    grantee,
+    privilege_type
+FROM 
+    information_schema.role_table_grants
+WHERE 
+    table_name = 'view_name' AND 
+    table_schema = 'schema_name';
+
+
+SELECT 
+    table_schema,
+    table_name,
+    grantee,
+    privilege_type
+FROM 
+    information_schema.role_table_grants
+WHERE 
+    table_type = 'VIEW';
+
+
+
+
+****************************************************************************************************************************************************************
+
+Create user with Password Expiry
+
+CREATE USER user_name PASSWORD '******' VALID UNTIL '2024-05-24 00:00:00+00';
+
+
+1.create user with password:- 
+create role role_name with login, password "password";
+
+2. give that user permission to connect database: -
+GRANT CONNECT ON DATABASE database_name TO username;
+
+3. Give that user permission to use schema: -
+GRANT USAGE ON SCHEMA schema_name TO username;
+
+4. grant required permission:- 
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA schema_name TO username;
+
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA schema_name TO username;
+
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA schema_name TO username;
+
+GRANT ALL PRIVILEGES ON DATABASE database_name TO username;
+
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA schema_name TO username;
+
+
+
+5.rename schema name:- 
+alter schema old_schema_name rename to new_schema_name;
+
+6.change schema owner:- 
+alter schema schema_name old_owner owner to new_owner;
+
+7.change owner of tables:- 
+select 'Alter table '||t.schemaname||'.'||t.tablename ||' owner to db_varthana;' from pg_tables t where schemaname='digital_collections_varthana';
+select 'Alter table '||t.schemaname||'.'||t.sequencename ||' owner to db_lendingkart;' from pg_sequences t where schemaname='digital_collections_varthana';
+
+8. change owner of database:- 
+alter database database_name old_owner owner to new_owner;
+
+
+
+Note:-
+
+if you create database and user and you given database connect and usage permission to newly create database. then you have to change schema owner to that database.
+
+Because if you did not change the schema owner then you got schema permission denied error
+
+*******************************************************************************************************************************************************************
+
+task:- create user and give same permisssion to old user has.(old user:- abc)
+
+ans:- 
+
+1.create user abc_new with password '123';
+
+2. grant abc_new to abc;
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+--- Set Default Privileges for a Role:
+ 
+1.  You can set default privileges for a role so 
+    that any objects created by this role will have the specified permissions.
+
+command:- 
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA your_schema
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO your_role;
+
+
+2. This command ensures that any new tables created in the specified schema will automatically 
+   have the SELECT, INSERT, UPDATE, and DELETE permissions granted to your_role.
+
+
+
+
+---------- Set Default Privileges for a Specific User:-
+
+1. You can also specify default privileges for objects created by a specific user.
+
+command:- 
+
+ALTER DEFAULT PRIVILEGES FOR USER your_user IN SCHEMA your_schema
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO your_role;
+
+2. This command ensures that any new tables created in the specified schema by your_user 
+   will automatically have the specified permissions granted to your_role.
+
+
+-------------- Set Default Privileges for All Users:
+1. If you want to set default privileges for all users who create tables in a schema, you can do so without specifying a particular user.
+
+command:- 
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA your_schema
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO PUBLIC;
+
+2. This command ensures that any new tables created in the specified schema will automatically have the specified permissions granted to all users.
+
+
+
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+Revoke:-
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA bkp
+REVOKE SELECT, INSERT, UPDATE ,DELETE ON TABLES FROM pennantvendor;
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+1. Creating a Custom Role for Monitoring
+
+CREATE ROLE monitoring_role;
+GRANT SELECT ON pg_stat_activity, pg_stat_replication, pg_stat_database TO monitoring_role;
+GRANT monitoring_role TO your_user;
+
+
+
+2.Grant the pg_monitor Role
+
+GRANT pg_monitor TO your_user;
+
+
+

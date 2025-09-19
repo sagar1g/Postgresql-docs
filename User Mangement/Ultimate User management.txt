@@ -1,0 +1,633 @@
+********************************user mangement**********************************
+
+#############################################command##############################################################
+
+1. In PostgreSQL, the TRUNCATE command is considered a powerful operation, and by default, only the owner of the table or a superuser can execute it.
+
+
+
+2.to See particular user privilege:- 
+ 
+
+SELECT grantee, table_schema, table_name, privilege_type
+FROM information_schema.role_table_grants
+WHERE grantee = 'nehajadhav.ext';
+
+
+SELECT 
+    grantee AS user_name, 
+    table_catalog, 
+    table_schema, 
+    table_name, 
+    privilege_type 
+FROM 
+    information_schema.role_table_grants 
+WHERE 
+    table_schema NOT IN ('pg_catalog', 'information_schema')  -- Exclude specific schemas
+ORDER BY 
+    grantee, table_name;
+
+
+
+==================================================================================================================================
+
+
+table level permission:- 
+
+SELECT 
+    table_schema,
+    table_name,
+    MAX(CASE WHEN privilege_type = 'SELECT' THEN grantee END) AS select_role,
+    MAX(CASE WHEN privilege_type = 'INSERT' THEN grantee END) AS insert_role,
+    MAX(CASE WHEN privilege_type = 'UPDATE' THEN grantee END) AS update_role,
+    MAX(CASE WHEN privilege_type = 'DELETE' THEN grantee END) AS delete_role
+FROM 
+    information_schema.role_table_grants
+WHERE 
+    grantee = 'SantoshW'
+GROUP BY 
+    table_schema, table_name
+ORDER BY 
+    table_name;
+
+
+this query work:-
+
+
+SELECT 
+    tab.table_schema AS schema_name,
+    tab.table_name,
+    has_table_privilege('pennantvendor', tab.table_schema || '.' || tab.table_name, 'SELECT') AS has_select,
+    has_table_privilege('pennantvendor', tab.table_schema || '.' || tab.table_name, 'INSERT') AS has_insert,
+    has_table_privilege('pennantvendor', tab.table_schema || '.' || tab.table_name, 'UPDATE') AS has_update,
+    has_table_privilege('pennantvendor', tab.table_schema || '.' || tab.table_name, 'DELETE') AS has_delete
+FROM 
+    information_schema.tables tab
+WHERE 
+    tab.table_schema = 'plf'  -- Replace with your schema name
+ORDER BY 
+    tab.table_name;
+
+
+
+
+
+
+SELECT 
+    table_schema,
+    table_name,
+    CASE WHEN MAX(CASE WHEN privilege_type = 'SELECT' THEN 1 END) IS NOT NULL THEN 'YES' ELSE 'NO' END AS select_privilege,
+    CASE WHEN MAX(CASE WHEN privilege_type = 'INSERT' THEN 1 END) IS NOT NULL THEN 'YES' ELSE 'NO' END AS insert_privilege,
+    CASE WHEN MAX(CASE WHEN privilege_type = 'UPDATE' THEN 1 END) IS NOT NULL THEN 'YES' ELSE 'NO' END AS update_privilege,
+    CASE WHEN MAX(CASE WHEN privilege_type = 'DELETE' THEN 1 END) IS NOT NULL THEN 'YES' ELSE 'NO' END AS delete_privilege
+FROM 
+    information_schema.role_table_grants
+WHERE 
+    grantee = 'pamdbal1'
+    AND table_schema = 'public'  -- Replace with your specific schema name
+GROUP BY 
+    table_schema, table_name
+ORDER BY 
+    table_name;
+
+
+
+
+SELECT 
+    table_schema,
+    table_name,
+    grantee AS username,
+    MAX(CASE WHEN privilege_type = 'SELECT' THEN '✓' ELSE '-' END) AS can_select,
+    MAX(CASE WHEN privilege_type = 'INSERT' THEN '✓' ELSE '-' END) AS can_insert,
+    MAX(CASE WHEN privilege_type = 'UPDATE' THEN '✓' ELSE '-' END) AS can_update,
+    MAX(CASE WHEN privilege_type = 'DELETE' THEN '✓' ELSE '-' END) AS can_delete
+FROM 
+    information_schema.role_table_grants
+WHERE 
+    grantee = 'lambdauser' 
+    AND table_schema = 'DOL'
+GROUP BY 
+    table_schema, table_name, grantee
+ORDER BY 
+    table_name;
+
+
+SELECT 
+    table_name,
+    privilege_type,
+    has_table_privilege('hrushikesh.sawant', table_name, privilege_type) AS has_privilege
+FROM (
+    VALUES 
+        ('customer_retail_ed'),
+        ('customer_retail_ed_temp'),
+        ('customer_corp_ed'),
+        ('customer_corp_ed_temp'),
+        ('customer_sme_ed'),
+        ('customer_sme_ed_temp')) AS tables(table_name)
+CROSS JOIN (VALUES ('SELECT'), ('INSERT'), ('UPDATE'), ('DELETE')) AS privileges(privilege_type);
+
+
+
+
+
+=======================================================================================================================================================
+
+
+schema level permission:- 
+
+SELECT nspname AS schema_name,
+       pg_roles.rolname AS user_name,
+       has_schema_privilege(pg_roles.rolname, nspname, 'USAGE') AS has_usage,
+       has_schema_privilege(pg_roles.rolname, nspname, 'CREATE') AS has_create
+FROM pg_namespace, pg_roles
+WHERE rolname = 'username';
+
+SELECT 
+    n.nspname AS schema_name,
+    r.rolname AS grantee,
+    p.privilege_type
+FROM pg_namespace n
+LEFT JOIN LATERAL aclexplode(n.nspacl) p ON true
+LEFT JOIN pg_roles r ON p.grantee = r.oid
+ORDER BY n.nspname, r.rolname;
+
+
+
+Check Sequence-Level Permissions:-
+
+SELECT grantee,
+       privilege_type
+FROM information_schema.role_sequence_grants
+WHERE sequence_schema = 'schema_name'
+  AND sequence_name = 'sequence_name'
+  AND grantee = 'username';
+
+#############schema permission:- 
+
+
+4. To schema permission:-  
+
+SELECT 
+    n.nspname AS schema_name,
+    pg_catalog.pg_get_userbyid(n.nspowner) AS owner,
+    nspacl
+FROM 
+    pg_namespace n
+WHERE 
+    n.nspname = 'plfsnap';
+
+
+
+#####################################################################################################################################################################
+
+3.view permission:- 
+
+tO check 
+SELECT 
+    grantee,
+    privilege_type
+FROM 
+    information_schema.role_table_grants
+WHERE 
+    table_name = 'view_name' AND 
+    table_schema = 'schema_name';
+
+
+SELECT 
+    table_schema,
+    table_name,
+    grantee,
+    privilege_type
+FROM 
+    information_schema.role_table_grants
+WHERE 
+    table_type = 'VIEW';
+
+to check permission of view:- 
+
+SELECT 
+    privilege_type, 
+    has_table_privilege('finappuser', 'facilitydetails_view', privilege_type) AS has_privilege
+FROM (
+    VALUES ('SELECT'), ('INSERT'), ('UPDATE'), ('DELETE')
+) AS privileges(privilege_type);
+
+
+
+
+
+
+
+#####################################################################################################################################################################	
+
+
+
+#########################################################################################################################
+
+to particular user premission for particular schema and table
+
+SELECT 
+    grantee, 
+    table_schema, 
+    table_name, 
+    privilege_type
+FROM 
+    information_schema.role_table_grants
+WHERE 
+    grantee = 'hrushikesh.sawant'
+    AND table_name = 'pan_verify_dtl'
+    AND table_schema = 'public';
+
+
+###################view :- 
+
+
+##################to see particular user view permission
+
+SELECT 
+    c.relname AS view_name,
+    pg_catalog.pg_get_userbyid(c.relowner) AS owner,
+    COALESCE((
+        SELECT string_agg(acl::text, ', ')
+        FROM (
+            SELECT unnest(c.relacl) AS acl
+        ) AS acl_list
+        WHERE acl::text LIKE 'ganeshkale.ext=%'  -- Replace 'finappuser' with actual username
+    ), 'No specific permissions for user') AS user_permissions
+FROM 
+    pg_class c
+JOIN 
+    pg_namespace n ON n.oid = c.relnamespace
+WHERE 
+    c.relkind = 'v'  -- 'v' stands for view
+    AND c.relname = 'vw_profectus_hunter_live'
+    AND n.nspname = 'plfsnap';
+
+
+
+###########to see owner of view 
+
+SELECT 
+    c.relname AS view_name,
+    pg_catalog.pg_get_userbyid(c.relowner) AS owner
+FROM 
+    pg_class c
+JOIN 
+    pg_namespace n ON n.oid = c.relnamespace
+WHERE 
+    c.relkind = 'v'  -- 'v' stands for view
+    AND c.relname = 'vw_profectus_hunter_live'  -- Replace with your view name
+    AND n.nspname = 'plfsnap';  -- Replace with your schema name
+
+
+
+
+
+
+######################################################################################################################	
+Activity to assign permission and user:- 
+
+GRANT CONNECT ON DATABASE csb TO db_csb;
+GRANT USAGE ON SCHEMA digital_collections TO db_csb;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA digital_collections TO db_csb;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA digital_collections TO db_csb;
+
+
+
+
+****************************************************************************************************************************************************************
+
+############################################Grant Command#################################################################
+Create user with Password Expiry
+
+CREATE USER user_name PASSWORD '******' VALID UNTIL '2024-05-24 00:00:00+00';
+
+CREATE USER "Aparna.bhilare.pcpl" WITH PASSWORD 'Aparna@123' VALID UNTIL '2024-08-15';
+
+
+1.create user with password:- 
+create role role_name with login, password "password";
+
+2. give that user permission to connect database: -
+GRANT CONNECT ON DATABASE database_name TO username;
+
+3. Give that user permission to use schema: -
+GRANT USAGE ON SCHEMA schema_name TO username;
+
+4. grant required permission:- 
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA schema_name TO username;
+
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA schema_name TO username;
+
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA schema_name TO username;
+
+GRANT ALL PRIVILEGES ON DATABASE database_name TO username;
+
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA schema_name TO username;
+
+GRANT SELECT, INSERT,UPDATE ON TABLE public.pan_verify_dtl TO hrushikesh.sawant;
+
+GRANT CREATE ON SCHEMA bkp  TO "hrushikesh.sawant";
+
+
+9.Grant permission to view:- 
+
+GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA schema_name TO username;
+
+ALTER DATABASE database_name OWNER TO new_owner;
+
+
+
+Note:-
+
+if you create database and user and you given database connect and usage permission to newly create database. then you have to change schema owner to that database.
+
+Because if you did not change the schema owner then you got schema permission denied error
+
+
+
+*******************************************************************************************************************************************************************
+
+
+
+task:- create user and give same permisssion to old user has.(old user:- abc)
+
+ans:- 
+
+1.create user abc_new with password '123';
+
+2. grant abc_new to abc;
+
+
+
+
+
+###############################################owner change #############################################################
+
+1.rename schema name:- 
+alter schema old_schema_name rename to new_schema_name;
+
+2.change schema owner:- 
+alter schema schema_name old_owner owner to new_owner;
+
+3.change owner of tables:- 
+select 'Alter table '||t.schemaname||'.'||t.tablename ||' owner to db_varthana;' from pg_tables t where schemaname='digital_collections_varthana';
+select 'Alter table '||t.schemaname||'.'||t.sequencename ||' owner to db_lendingkart;' from pg_sequences t where schemaname='digital_collections_varthana';
+
+
+
+
+4. change owner of database:- 
+alter database database_name old_owner owner to new_owner;
+
+
+#######################################################################################################################################################################
+
+5.Function:- 
+
+
+To change owner of that funaction:- 
+
+
+
+SELECT 'ALTER FUNCTION ' || n.nspname || '.' || p.proname || ' OWNER TO retmeddb;' 
+FROM pg_proc p 
+JOIN pg_namespace n ON p.pronamespace = n.oid 
+WHERE n.nspname IN ('public') 
+AND pg_catalog.pg_get_userbyid(p.proowner) = 'Medical_Retirement'
+ORDER BY n.nspname, p.proname;
+
+
+
+SELECT 'ALTER FUNCTION ' || n.nspname || '.' || p.proname || ' OWNER TO "retmeddb";' 
+FROM pg_proc p 
+JOIN pg_namespace n ON p.pronamespace = n.oid 
+WHERE n.nspname IN ('public') 
+ORDER BY n.nspname, p.proname;
+
+
+
+
+To see all function :-  
+ 
+SELECT n.nspname AS schema_name,
+       p.proname AS function_name,
+       r.rolname AS owner
+FROM pg_proc p
+JOIN pg_namespace n ON p.pronamespace = n.oid
+JOIN pg_roles r ON p.proowner = r.oid
+WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
+ORDER BY schema_name, function_name;
+
+
+=====================================================================
+
+SELECT 
+    n.nspname AS schema_name,
+    p.proname AS procedure_name,
+    r.rolname AS owner
+FROM pg_proc p
+JOIN pg_namespace n ON p.pronamespace = n.oid
+JOIN pg_roles r ON p.proowner = r.oid
+WHERE p.prokind = 'p' -- Filters for procedures
+  AND n.nspname NOT IN ('pg_catalog', 'information_schema') -- Excludes system schemas
+ORDER BY schema_name, procedure_name;
+
+
+SELECT 
+    format(
+        'ALTER PROCEDURE %I.%I(%s) OWNER TO "Medical_Retirement";',
+        n.nspname, 
+        p.proname, 
+        COALESCE(pg_catalog.pg_get_function_arguments(p.oid), '') -- Handle no arguments
+    ) AS alter_statement
+FROM pg_proc p
+JOIN pg_namespace n ON p.pronamespace = n.oid
+WHERE p.prokind = 'p'
+  AND n.nspname = 'public'
+  AND pg_catalog.pg_get_function_arguments(p.oid) IS NOT NULL -- Ensure arguments exist
+ORDER BY n.nspname, p.proname;
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  Stored Procedures
+
+
+ Check Owners of All Stored Procedures
+
+SELECT proname, nspname AS schema_name, pg_roles.rolname AS owner
+FROM pg_proc 
+JOIN pg_namespace ON pg_proc.pronamespace = pg_namespace.oid
+JOIN pg_roles ON pg_proc.proowner = pg_roles.oid
+WHERE prokind = 'p';
+
+SELECT n.nspname AS schema_name, p.proname AS procedure_name, r.rolname AS owner
+FROM pg_proc p
+JOIN pg_namespace n ON p.pronamespace = n.oid
+JOIN pg_roles r ON p.proowner = r.oid
+WHERE p.prokind = 'p'   -- Replace with procedure name
+AND r.rolname = 'Medical_Retirement';  -- Check for a specific owner
+
+
+To see argument :- 
+
+SELECT proname, pg_get_function_arguments(oid) AS arguments
+FROM pg_proc
+WHERE proname = 'sp_tms_save_mutilple_advance_details'; 
+
+
+
+To change owner :- 
+ALTER PROCEDURE public.delete_tour_request_journey_details(IN rjd_rh_key integer) OWNER TO retmeddb;
+
+ALTER PROCEDURE public.delete_tour_request_journey_details(srgument palce here) OWNER TO retmeddb;
+
+To check arg:- 
+
+SELECT p.proname, r.rolname AS owner
+FROM pg_proc p
+JOIN pg_roles r ON p.proowner = r.oid
+WHERE p.proname = 'delete_tour_request_journey_details';
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+--- Set Default Privileges for a Role:
+ 
+1.  You can set default privileges for a role so 
+    that any objects created by this role will have the specified permissions.
+
+command:- 
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA your_schema
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO your_role;
+
+
+2. This command ensures that any new tables created in the specified schema will automatically 
+   have the SELECT, INSERT, UPDATE, and DELETE permissions granted to your_role.
+
+
+
+
+---------- Set Default Privileges for a Specific User:-
+
+1. You can also specify default privileges for objects created by a specific user.
+
+command:- 
+
+ALTER DEFAULT PRIVILEGES FOR USER your_user IN SCHEMA your_schema
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO your_role;
+
+2. This command ensures that any new tables created in the specified schema by your_user 
+   will automatically have the specified permissions granted to your_role.
+
+
+-------------- Set Default Privileges for All Users:
+1. If you want to set default privileges for all users who create tables in a schema, you can do so without specifying a particular user.
+
+command:- 
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA your_schema
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO PUBLIC;
+
+2. This command ensures that any new tables created in the specified schema will automatically have the specified permissions granted to all users.
+
+
+
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+Revoke:-
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA bkp
+REVOKE SELECT, INSERT, UPDATE ,DELETE ON TABLES FROM pennantvendor;
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+1. Creating a Custom Role for Monitoring
+
+CREATE ROLE monitoring_role;
+GRANT SELECT ON pg_stat_activity, pg_stat_replication, pg_stat_database TO monitoring_role;
+GRANT monitoring_role TO your_user;
+
+
+
+2.Grant the pg_monitor Role
+
+GRANT pg_monitor TO your_user;
+
+
+========================================================================================================================================================================
+
+
+drop user:
+
+ram=# drop user rambabu;
+ERROR: role "rambabu" cannot be dropped because some objects depend on it DETAIL: privileges for table test.emp1
+privileges for table test.emp
+privileges for schema test
+
+ram=# REASSIGN OWNED BY rambabu to newuser;
+REASSIGN OWNED
+
+ram=# drop owned by rambabu;
+DROP OWNED
+
+ram=# drop user rambabu;
+
+=========================================================================================================================================
+
+view permission:- 
+
+To check premission:- 
+
+SELECT 
+    privilege_type, 
+    has_table_privilege('finappuser', 'a_test_view', privilege_type) AS has_privilege
+FROM (
+    VALUES ('SELECT'), ('INSERT'), ('UPDATE'), ('DELETE')
+) AS privileges(privilege_type);
+
+
+SELECT 
+    'pennantvendor' AS user_name,
+    'facilitydetails_aview' AS view_name, 
+    privilege_type, 
+    CASE 
+        WHEN has_table_privilege('pennantvendor', 'facilitydetails_aview', privilege_type) 
+        THEN 'YES' 
+        ELSE 'NO' 
+    END AS has_privilege
+FROM (
+    VALUES ('SELECT'), ('INSERT'), ('UPDATE'), ('DELETE')
+) AS privileges(privilege_type);
+
+
+premission granted:- 
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON facilitydetails_view TO finappuser;
+GRANT ALL  PRIVILEGES  ON facilitydetails_view TO "pennantvendor";
+
+
+to check view:- 
+
+SELECT table_schema AS schema_name,
+       table_name AS view_name
+FROM information_schema.views
+WHERE table_schema = 'plf'
+
+   (or)
+   
+\dv
+
+   (or)
+   
+SELECT grantee, privilege_type 
+FROM information_schema.role_table_grants 
+WHERE table_name = 'facilitydetails_aview';
+
+
+

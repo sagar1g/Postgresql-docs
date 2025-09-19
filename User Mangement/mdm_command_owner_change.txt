@@ -1,0 +1,135 @@
+For Masterdata_tn98 (10.20.31.14):
+
+create role mdm;
+
+DO $$
+DECLARE
+    tbl_schema TEXT;
+    tbl_name TEXT;
+    seq_name TEXT;
+BEGIN
+ -- Change ownership of all tables
+    FOR tbl_schema, tbl_name IN
+        SELECT schemaname, tablename
+        FROM pg_tables
+        WHERE schemaname IN ('meter_data', 'ami_master')
+    LOOP
+        EXECUTE format(
+            'ALTER TABLE %I.%I OWNER TO mdm',
+            tbl_schema, tbl_name
+        );
+    END LOOP;
+
+-- Change ownership of all sequences
+    FOR tbl_schema, seq_name IN
+        SELECT schemaname, sequencename
+        FROM pg_sequences
+        WHERE schemaname IN ('meter_data', 'ami_master')
+    LOOP
+        EXECUTE format(
+            'ALTER SEQUENCE %I.%I OWNER TO mdm',
+            tbl_schema, seq_name
+        );
+    END LOOP;
+END $$;
+
+
+--- for fdw:
+create user fdw_user password 'bcits@321';
+grant connect on database "masterdb_tn98" to fdw_user;
+grant usage on schema ami_master to fdw_user;
+grant insert,delete,select,update on all tables in schema ami_master to fdw_user;
+grant all on all sequences in schema ami_master to fdw_user;
+
+ create role read_only;
+ grant usage on schema ami_master to read_only;
+grant select on all tables in schema ami_master to read_only;
+ grant select on all sequences in schema ami_master to read_only;
+
+ create role write_role;
+grant usage on schema ami_master to write_role;
+grant insert,update,delete,select  on all tables in schema ami_master to write_role;
+grant all on all sequences in schema ami_master to write_role;
+
+create role create_role;
+grant create on database masterdata_hp to create_role;
+grant create on schema  ami_master to "create_role";
+
+-----------------------------------------------------------------------------------------------------------------------
+
+Meterdata_tn98 (10.20.31.13) :
+
+--- for postgresql_fdw:
+
+create extension postgres_fdw;
+
+CREATE SERVER fdw_server FOREIGN DATA WRAPPER postgres_fdw OPTIONS (host '10.20.31.14', dbname 'masterdb_tn98', port '5432');
+
+CREATE USER MAPPING FOR postgres SERVER fdw_server OPTIONS (user 'fdw_user', password 'bcits@321');
+
+IMPORT FOREIGN SCHEMA ami_master limit to ( alarm_definition,dcu_master,event_master,feederdetails,master_main_hst,meter_alarm_master,meter_firsttime_read_data,nic_inventory,process_tracker,search_nodes,service_orders,so_config,substation_details,item_issue_return,amilocation,meter_inventory,consumermaster,master_main,survey_output,dtdetails,gateway_survey_installation,prepaid_reading,prepaid_master,dt_health_report,dt_meter_installation_data,exception,feeder_meter_installation_data,rc_dc_log) FROM SERVER fdw_server INTO ami_master ;
+
+ create role read_only;
+ grant usage on schema meter_data,ami_master to read_only;
+grant select on all tables in schema meter_data,ami_master to read_only;
+ grant select on all sequences in schema meter_data,ami_master to read_only;
+
+ create role write_role;
+grant usage on schema meter_data,ami_master to write_role;
+grant insert,update,delete,select  on all tables in schema meter_data,ami_master to write_role;
+ grant all on all sequences in schema meter_data,ami_master to write_role;
+
+create role create_role;
+grant create on database meterdata to create_role;
+grant create on schema  meter_data,ami_master to "create_role";
+
+create role fdw_select_role;
+grant USAGE ON SCHEMA ami_master to fdw_select_role ;
+grant SELECT on ALL tables in schema ami_master to fdw_select_role ;
+grant SELECT on ALL sequences in schema ami_master to fdw_select_role ;
+
+--- Mview ownership
+create role mview_ownership;
+
+DO $$
+DECLARE
+    mv_schema TEXT;
+    mv_name TEXT;
+BEGIN
+    FOR mv_schema, mv_name IN
+        SELECT schemaname, matviewname
+        FROM pg_matviews
+        WHERE schemaname IN ('meter_data', 'ami_master')
+    LOOP
+        EXECUTE format(
+            'ALTER MATERIALIZED VIEW %I.%I OWNER TO mview_ownership',
+            mv_schema, mv_name
+        );
+    END LOOP;
+END $$;
+
+grant fdw_select_role to mview_ownership ;
+
+create user MAPPING FOR mview_ownership SERVER fdw_server OPTIONS ( user 'fdw_user', password 'bcits@321');
+
+
+
+--Mview Select:
+create role select_on_mview;
+
+DO $$
+DECLARE
+    mv_schema TEXT;
+    mv_name TEXT;
+BEGIN
+    FOR mv_schema, mv_name IN
+        SELECT schemaname, matviewname
+        FROM pg_matviews
+        WHERE schemaname IN ('meter_data', 'ami_master')
+    LOOP
+        EXECUTE format(
+            'GRANT SELECT ON %I.%I TO select_on_mview',
+            mv_schema, mv_name
+        );
+    END LOOP;
+END $$;

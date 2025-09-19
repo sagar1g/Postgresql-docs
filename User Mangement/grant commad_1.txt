@@ -1,0 +1,11 @@
+1.GRANT  CONNECT ON  DATABASE <database_name > TO <username>;
+ --the CONNECT privilege allows a user to connect to a specific database within the PostgreSQL cluster.--
+
+2.GRANT ALL ON SCHEMA public TO <username>;
+This command is used when you want to provide full access and control over all objects within the public schema to a specific user or role.
+
+
+3.GRANT USAGE ON  SCHEMA public  TO readonly;
+the USAGE privilege on the public schema allows a user or role to access objects (such as tables, views, and functions) within the public schema of a database. 
+By default, all users have USAGE privileges on the public schema.
+

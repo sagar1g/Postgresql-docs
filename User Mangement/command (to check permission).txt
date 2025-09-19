@@ -1,0 +1,167 @@
+table level access:- 
+
+1. specific user & specific schemae:- 
+
+SELECT 
+    tab.table_schema AS schema_name,
+    tab.table_name,
+    'pennantvendor' AS user_name,
+    has_table_privilege('pennantvendor', tab.table_schema || '.' || tab.table_name, 'SELECT') AS has_select,
+    has_table_privilege('pennantvendor', tab.table_schema || '.' || tab.table_name, 'INSERT') AS has_insert,
+    has_table_privilege('pennantvendor', tab.table_schema || '.' || tab.table_name, 'UPDATE') AS has_update,
+    has_table_privilege('pennantvendor', tab.table_schema || '.' || tab.table_name, 'DELETE') AS has_delete
+FROM 
+    information_schema.tables tab
+WHERE 
+    tab.table_schema = 'plf'  -- Replace with your schema name
+ORDER BY 
+    tab.table_name;
+
+2. specific schemae:- 
+
+SELECT 
+    tab.table_schema AS schema_name,
+    tab.table_name,
+    has_table_privilege('pennantvendor', tab.table_schema || '.' || tab.table_name, 'SELECT') AS has_select,
+    has_table_privilege('pennantvendor', tab.table_schema || '.' || tab.table_name, 'INSERT') AS has_insert,
+    has_table_privilege('pennantvendor', tab.table_schema || '.' || tab.table_name, 'UPDATE') AS has_update,
+    has_table_privilege('pennantvendor', tab.table_schema || '.' || tab.table_name, 'DELETE') AS has_delete
+FROM 
+    information_schema.tables tab
+WHERE 
+    tab.table_schema = 'plfaudit'  -- Replace with your schema name
+ORDER BY 
+    tab.table_name;
+	
+3.to See particular user privilege:- 
+ 
+
+SELECT grantee, table_schema, table_name, privilege_type
+FROM information_schema.role_table_grants
+WHERE grantee = 'nehajadhav.ext';
+
+SELECT 
+    grantee AS user_name, 
+    table_catalog, 
+    table_schema, 
+    table_name, 
+    privilege_type 
+FROM 
+    information_schema.role_table_grants 
+WHERE 
+    table_schema NOT IN ('pg_catalog', 'information_schema')  -- Exclude specific schemas
+ORDER BY 
+    grantee, table_name;
+	
+	
+4.to see paraticular table:- 
+
+SELECT 
+    table_name,
+    privilege_type,
+    has_table_privilege('hrushikesh.sawant', table_name, privilege_type) AS has_privilege
+FROM (
+    VALUES 
+        ('customer_retail_ed'),
+        ('customer_retail_ed_temp'),
+        ('customer_corp_ed'),
+        ('customer_corp_ed_temp'),
+        ('customer_sme_ed'),
+        ('customer_sme_ed_temp')) AS tables(table_name)
+CROSS JOIN (VALUES ('SELECT'), ('INSERT'), ('UPDATE'), ('DELETE')) AS privileges(privilege_type);
+
+
+SELECT 
+    'hrushikesh.sawant' AS user_name,  -- Replace with the desired user
+    table_name,
+    privilege_type,
+    has_table_privilege('hrushikesh.sawant', table_name, privilege_type) AS has_privilege
+FROM (
+    VALUES 
+        ('customer_retail_ed'),
+        ('customer_retail_ed_temp'),
+        ('customer_corp_ed'),
+        ('customer_corp_ed_temp'),
+        ('customer_sme_ed'),
+        ('customer_sme_ed_temp')
+) AS tables(table_name)
+CROSS JOIN 
+(VALUES ('SELECT'), ('INSERT'), ('UPDATE'), ('DELETE')) AS privileges(privilege_type);
+
+=========================================================================================================================================
+
+2. schema:- 
+
+SELECT nspname AS schema_name,
+       pg_roles.rolname AS user_name,
+       has_schema_privilege(pg_roles.rolname, nspname, 'USAGE') AS has_usage,
+       has_schema_privilege(pg_roles.rolname, nspname, 'CREATE') AS has_create
+FROM pg_namespace, pg_roles
+WHERE rolname = 'username';
+
+
+Check Sequence-Level Permissions:-
+
+SELECT grantee,
+       privilege_type
+FROM information_schema.role_sequence_grants
+WHERE sequence_schema = 'schema_name'
+  AND sequence_name = 'sequence_name'
+  AND grantee = 'username';
+
+#############schema permission:- 
+
+
+4. To schema permission:-  
+
+SELECT 
+    n.nspname AS schema_name,
+    pg_catalog.pg_get_userbyid(n.nspowner) AS owner,
+    nspacl
+FROM 
+    pg_namespace n
+WHERE 
+    n.nspname = 'plfsnap';
+	
+
+======================================================================================================================================
+
+view premission:- 
+
+tO check 
+SELECT 
+    grantee,
+    privilege_type
+FROM 
+    information_schema.role_table_grants
+WHERE 
+    table_name = 'view_name' AND 
+    table_schema = 'schema_name';
+
+
+to check permission of view:- 
+
+SELECT 
+    privilege_type, 
+    has_table_privilege('finappuser', 'facilitydetails_view', privilege_type) AS has_privilege
+FROM (
+    VALUES ('SELECT'), ('INSERT'), ('UPDATE'), ('DELETE')
+) AS privileges(privilege_type);
+
+
+SELECT 
+    'hrushikesh.sawant' AS user_name,  -- Replace with the desired user
+    view_name,
+    privilege_type,
+    has_table_privilege('hrushikesh.sawant', view_schema || '.' || view_name, privilege_type) AS has_privilege
+FROM (
+    SELECT table_schema AS view_schema, table_name AS view_name 
+    FROM information_schema.views 
+    WHERE table_schema = 'plf' -- Replace with your schema name
+) AS views
+CROSS JOIN 
+(VALUES ('SELECT'), ('INSERT'), ('UPDATE'), ('DELETE')) AS privileges(privilege_type);
+
+========================================================================================================================================
+
+

@@ -1,0 +1,94 @@
+#Grant and revoke:-
+1.create role:- 
+syntax:- create role role_name;
+a:- without login:- create role bob;
+
+b:-with login and password:- create role bob login password '123';
+
+c:- superuser:-create role bob login superuser;
+
+d:-create database:- create role bob login createdb;
+
+e:- valid timestamp:- create role bob login valid until'2030-01-10';
+
+f:- connection limit:- create role bob login connection limit 1000;
+--------------------------------------------------------------------------------------------------------------------------
+2.Grant:- 
+After creating a role with the LOGIN attribute, the role can log in to the PostgreSQL database server. 
+However, it cannot do anything to the database objects like tables, views, functions, etc.
+
+synatx:- grant select or delete or update or truncate or insert | ALL on table_name to role_name|user_name;
+
+a.previliage assign to specific table:- grant select on emp to bob;
+
+b.Grant all privileges on a table to a role:- grant all on emp to bob;
+
+c.Grant all privileges on all tables in a schema to a role:- GRANT ALL ON ALL TABLES IN SCHEMA public TO bob;
+
+d.Grant SELECT on all tables:- grant select  on all tables in schema public to bob;
+---------------------------------------------------------------------------------------------------------------------------
+3.revoke:-
+The REVOKE statement revokes previously granted privileges on database objects from a role
+
+syntax:- revoke privilage|all on table table_name|all tables in schame schame_name from role_name;
+
+a.Revoke privileges from a role:- revoke select on emp from bob; or revoke all on emp from bob;
+---------------------------------------------------------------------------------------------------------------------------
+
+4.Alter:- 
+
+To change attributes of a role, you use the following form of ALTER ROLE statement
+
+syntax:- ALTER ROLE role_name [WITH] option;
+
+1.SUPERUSER | NOSUPERUSER – determine if the role is a superuser or not.
+2.CREATEDB | NOCREATEDB– allow the role to create new databases.
+3.CREATEROLE | NOCREATEROLE – allow the role to create or change roles.
+4.INHERIT | NOINHERIT – determine if the role to inherit privileges of roles of which it is a member.
+5.LOGIN | NOLOGIN – allow the role to log in.
+6.REPLICATION | NOREPLICATION – determine if the role is a replication roles.
+7.BYPASSRLS | NOBYPASSRLS – determine if the role to by pass a row-level security (RLS) policy.
+8.CONNECTION LIMIT limit – specify the number of concurrent connection a role can made, -1 means unlimited.
+9.PASSWORD 'password' | PASSWORD NULL – change the role’s password.
+10.VALID UNTIL 'timestamp' – set the date and time after which the role’s password is no long valid.
+
+
+a.superuser:- alter role bob with superuser;
+
+b.valid:- alter role bob valid until '2030-01-10';
+
+c.Using the PostgreSQL ALTER ROLE to rename roles :- alter role bob rename to johan;
+
+--------------------------------------------------------------------------------------------------------------------------
+
+5.Drop role::-
+
+To remove a specified role, you use the DROP ROLE statement
+
+syntax:- DROP ROLE [IF EXISTS] target_role;
+
+Note:- A.When you remove a role referenced in any database, PostgreSQL will raise an error. 
+	In this case, you have to take two steps:
+		1.First, either remove the database objects owned by the role using the DROP OWNED statement or reassign the ownership 
+		of the database objects to another role REASSIGN OWNED.
+		2.Second, revoke any permissions granted to the role.
+
+syntax:-step1:- if any role assigned to user :-
+	REASSIGN OWNED BY target_role TO another_role;
+	DROP OWNED BY target_role;
+	step2:-DROP ROLE target_role;
+
+---------------------------------------------------------------------------------------------------------------------------
+
+6.PostgreSQL Role Membership:- 
+
+It is easier to manage roles as a group so that you can grant or revoke privileges from 
+a group as a whole instead of doing it on an individual role.
+
+syntax:- CREATE ROLE group_role_name;(create role sales)
+
+a.To add a role to a group role, you use the following form of the GRANT statement:-
+grant sales to bob;
+
+b.To remove a user role from a group role, you use REVOKE statement:- revoke sales from bob; 
+

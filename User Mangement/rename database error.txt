@@ -1,0 +1,20 @@
+If user still connected database and you want to rename database because user connected to database it will not allowed to rename database. To rename database used bleow steps
+
+Sol:- 
+
+Step 1:- Temp disallow new connections and terminate exiting one
+
+-- Prevent new connections:
+ALTER DATABASE ecgc_neia WITH ALLOW_CONNECTIONS = false;
+
+-- Terminate existing connections:
+SELECT pg_terminate_backend(pid)
+FROM pg_stat_activity
+WHERE datname = 'ecgc_neia';
+
+Step 2:- 
+ALTER DATABASE ecgc_neia RENAME TO ecgc_neia_old_11082025;
+
+Step 3:- 
+
+ALTER DATABASE ecgc_neia_old_11082025 WITH ALLOW_CONNECTIONS = true;
