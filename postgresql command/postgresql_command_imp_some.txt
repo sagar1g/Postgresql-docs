@@ -1,0 +1,326 @@
+***********************************************************Database Management***************************************************************************************************
+
+1.How to connect to postgres db:-
+-set PATH if not done:
+
+postgres$ export PATH=/Library/PostgreSQL/10/bin:$PATH
+postgres$ which psql
+/Library/PostgreSQL/10/bin/psql
+
+-connect to db using SYNTAX - psql -d -U
+
+bash$ psql -U postgres(username) -d postgres(databasename) -h ip_address 
+------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+******************************Basic Command****************************************************************************************************************
+1.database size:-
+postgres=#\l+
+
+2.switch to another database:-
+postgres=#\c databasename
+
+3.list of database table:-
+postgres=#\dt+
+
+4.Describe table:-
+
+postgres=#\d tablename or  \d+
+
+5.list of all schema:-
+postgres=# \dn
+
+6.list of all user nad their role:-
+postgres=#\du+
+
+7. list of all function:-
+postgres=#\df+
+
+8.list of all views:-
+postgres=#\dv+
+
+9.save query result to file :-
+postgres=# \o <file_name>   ------------start
+
+postgres=#\o               --------------------------stop
+
+10.quit psql:-
+postgres=#\q
+
+11.execute previous command:-
+postgres=#\g
+
+12. To see version of postgresql:- 
+postgres=#select version();
+
+13.getting help on postgresql command:-
+
+postgres=#\?  or \h
+
+14.How to turn on timing and checking ; how much time a query takes to excute:-
+postgres=#\timing------------------------start
+postgres=#\timing ---------------------------stop
+
+15.edit query:-
+postgres=#\e
+
+16. database oid number:-
+postgres=#select datname,oid from pg_database where datname = 'database_name';
+
+17.to schema and table:-
+postgres=#select schemaname,tablename from pg_tables;
+postgres=#\dt *.*
+
+18.add data in table using external file:-
+
+bash$ psql -U postgres -d database_name -f <file_name.sql>
+
+bash$pg_restore -U postgres -d dvd /home/gaurav/dvdrental.tar
+
+19.currently working on schema:-
+postgres=#select current_schema();
+
+20.user:-
+postgres=#select current_user();
+
+21.current_database:-
+postgres=#select current_database();
+
+22.To see current setting in postgersql.conf file:-
+postgres=#select current_setting('setting name');
+example:- postgres=#select current_setting('shaered_buffers');
+
+23.when was last time your system has been rebooted:-
+
+postgres=#select pg_postmaster_start_time();
+
+24.current time and date:-
+postgres=#select now() as current;
+
+25.change database password :-
+postgres=# \password username
+
+26.To copy any query information in file:-\
+postgres#= \copy (select * form actory) To '/var/lib/pgsql/actor.csv' with (format csv,header);
+
+*******************************************************************************************************************************************************************
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+2.HOW TO FIND DATA DIRECTORY LOCATION :-
+
+a)dbaclass=# show data_directory;
+b)select setting from pg_settings where name = 'data_directory';
+c)-- This will show location of important files in postgres
+
+dbaclass=# SELECT name, setting FROM pg_settings WHERE category = 'File Locations';
+
+------------------------------------------------------------------------------------------------------------------------------------------------
+
+3.Find sessions in the postgres:-
+
+a) select pid as process_id,usename as username,datname as database_name,client_addr as client_address,
+   application_name,backend_start,state,state_change,query from pg_stat_activity;
+b)-- For specific database:-
+select pid as process_id,usename as username,datname as database_name,client_addr as client_address,
+application_name,backend_start,state,state_change,query from pg_stat_activity where datname='dbaclass';
+
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+4.kill session:-
+
+-- First find the pid of the session:
+
+dbaclass#SELECT datname as database, pid as pid, usename as username, application_name , client_addr , query FROM pg_stat_activity;
+
+<< Lets say the pid=1124, in the below query pass the pid value to kill that particular session..>>
+
+dbaclass#select pg_terminate_backend(pid) from pg_stat_activity where pid='1123';
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------
+
+5.cancel session:-
+
+-- First find the pid of the session:
+
+dbaclass#SELECT datname as database, pid as pid, usename as username, application_name , client_addr , query FROM pg_stat_activity;
+
+<< Lets say the pid=1124, in the below query pass the pid value to cancel that particular session query>>
+
+dbaclass#select pg_cancel_backend(pid) from pg_stat_activity where pid='1124';
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------------
+
+6.Blocking session:-
+
+-- QUERY TO FIND BLOCKING SESSION DETAILS
+
+dbaclass#select pid as blocked_pid, usename, pg_blocking_pids(pid) as "blocked_by(pid)", query as blocked_query from pg_stat_activity where cardinality(pg_blocking_pids(pid)) > 0;
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+7. config file location:-
+
+dbaclass=# SELECT name, setting FROM pg_settings WHERE category = 'File Locations';
+
+postgres#= show config_file
+
+postgres#= show hba_file;
+postgres#= show ident_file;
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+8.Find startup time and uptime postgres
+
+-- Uptime of server
+
+postgres# SELECT now() - pg_postmaster_start_time()  as postgres_uptime;
+
+-- Server startup time:
+
+postgres# SELECT pg_postmaster_start_time() as postgres_startup_time;
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+9.Find archiver process status:-
+
+postgres# select * from pg_stat_archiver;
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+10.Find the last pg config reload time:-
+
+-- Last pg config reload time
+
+postgres=# select pg_conf_load_time() ;
+
+-- Reload again and see whether reload time changed or not
+
+postgres=# select pg_reload_conf();
+
+postgres=# select pg_conf_load_time() ;
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+11.How to do wal switch manually
+
+postgres=# select pg_switch_wal();
+
+--------------------------------------------------------------------------------------------------------------
+
+12.Monitor archiving progress
+
+postgres#select pg_walfile_name(pg_current_wal_lsn()),last_archived_wal,last_failed_wal,
+('x'||substring(pg_walfile_name(pg_current_wal_lsn()),9,8))::bit(32)::int*256 +
+('x'||substring(pg_walfile_name(pg_current_wal_lsn()),17))::bit(32)::int -
+('x'||substring(last_archived_wal,9,8))::bit(32)::int*256 -
+('x'||substring(last_archived_wal,17))::bit(32)::int
+as diff from pg_stat_archiver;
+
+------------------------------------------------------------------------------------------------------------------------------
+
+13.View/modify connection limit of database:-
+
+---View existing connection limit setting:( datconnlimit )
+
+postgres=# select datname,datallowconn,datconnlimit from pg_database where datname='database_name';
+
+-- To set a specific limit for connection
+
+test_dev=# alter database <database_name> connection limit 100;
+
+-- To restrict all the connections to db
+
+test_dev=# alter database <database_name> connection limit 0;
+
+NOTE - > Even if connection limit is set to 0 , the superuser will be able to connect to database.
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+14.Find wal file details and its size:-
+
+-- List down all the wal files present in pg_wal
+
+postgres=# select * from pg_ls_waldir();
+
+-- Find total size of wal:
+
+postgres=# select sum(size) from pg_ls_waldir();
+
+-- Find current wal file lsn:
+
+postgres=# select pg_current_wal_insert_lsn(),pg_current_wal_lsn();
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+15.Find temp file usage of databases
+
+postgres=# SELECT datname, temp_files, temp_bytes, stats_reset FROM pg_stat_database;
+
+****************************************************************************************************************************************************************************************
+
+*****************************************************Maintenance********************************************************************************
+
+1.Update statistics of a table using analyze:-
+
+--To see live tuple, dead tuple :-
+
+postgres#= analyze verbose <tablename>;
+
+--To see live tuple, dead tuple another sachema:-
+
+postgres#= analyze scheamname.tablename (column_name,column_name);
+
+--last analyze:-
+postgres#= select schemaname,relname,analyze_count,last_analyze,last_autoanalyze from pg_stat_user_tables where relname in ('table_name');
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+2. Vacuum:-
+
+VACUUM - >  REMOVES DEAD ROWS, AND MARK THEM FOR REUSE, BUT IT DOESN’T RETURN THE SPACE TO postgres,. IT DOESN'T NEED EXCLUSIVE LOCK ON THE TABLE.
+
+--postgres#= vacuum verbose <table_name>;
+
+--both vacuum and analyze:
+
+dbaclass=# vacuum analyze <table_name>;
+
+--with verbose:
+
+dbaclass# vacuum verbose analyze dbatest.emptab;
+
+
+---Monitor vacuum process( if vacuum process runs for a long time)
+
+dbaclass#select * from pg_stat_progress_vacuum;
+
+--Check vacuum related information for the table
+
+dbaclass=# select schemaname,relname,last_vacuum,vacuum_count from pg_stat_user_tables where relname='table_name';
+
+Note :- 1.Frequently updated tables are good candidtes for vacuuming.
+2. Extra free space is not returned to the operting system it's just kept avaliable for re-use.
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+3.Full Vacuum:-
+
+VACUUM FULL:-  IT TAKES MORE TIME, BUT IT RETURNS THE SPACE TO OS BECAUSE OF ITS COMPLEX ALGORITHM. IT also requires additional disk space , 
+which can store the new copy of the table., until the activity is completed. Also it locks the table exclusively, which block all operations on the table .
+
+-- Command to run vacuum full command for table:
+
+dbaclass=# VACUUM FULL <table_name>;
+
+-- Check existing space and delete some data:
+dbaclass=# select pg_size_pretty(pg_relation_size('<table_name>'));
+
+Note :- 1. Take much longer than regular vacuum and places exclusive lock the tables
+
+----Find last vaccum/analyze details of a table---------
+
+select * from pg_stat_user_tables where relname='table_name';
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+

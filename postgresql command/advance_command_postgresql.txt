@@ -1,0 +1,1154 @@
+check point website:- 
+https://medium.com/@wasiualhasib/checkpoint-process-in-postgresql-c5f362a5e296
+
+========================================================================================================================
+1. to see specfic user , which  parameter set:- 
+select pg_roles. rolname,pg_db_role_setting.setconfig from pg_db_role_setting inner join pg_roles on pg_db_role_setting.setrole-pg_roles.oid; 
+
+
+1.lock present in postgres:-
+
+select t.relname,l.locktype,page,virtualtransaction,pid,mode,granted from pg_locks l, pg_stat_all_tables t where l.relation=t.relid order by relation asc;
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+2.blocking session present in postgres:- 
+
+dbaclass#select pid as blocked_pid, usename, pg_blocking_pids(pid) as "blocked_by(pid)", query as blocked_query 
+from pg_stat_activity where cardinality(pg_blocking_pids(pid)) > 0;
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+3.Find location of postgres related conf files
+
+dbaclass=# SELECT name, setting FROM pg_settings WHERE category = 'File Locations';
+
+show config_file;
+
+show hba_file;
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+4.-- Find list of installed extension:
+
+psql#SELECT * FROM pg_extension;
+
+-- For finding available extension in server:
+
+psql# SELECT * FROM pg_available_extensions;
+
+-----------------------------------------------------------------------------------------------------------------------------------------------
+5.archive process status:- 
+postgres# select * from pg_stat_archiver;
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------
+6.Get Config values from psql prompt.
+
+postgres=# select * from pg_settings;
+
+\x
+postgres=# select * from pg_settings where name='port';
+
+2. Alternatively you can check postgresql.conf file
+
+postgres=# show config_file;
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+7.-- Last pg config reload time
+
+postgres=# select pg_conf_load_time() ;
+
+-- Reload again and see whether reload time changed or not
+postgres=# select pg_reload_conf();
+
+postgres=# select pg_conf_load_time() ;
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+8.monitoring archive progress:- 
+
+postgres#select pg_walfile_name(pg_current_wal_lsn()),last_archived_wal,last_failed_wal,
+('x'||substring(pg_walfile_name(pg_current_wal_lsn()),9,8))::bit(32)::int*256 +
+('x'||substring(pg_walfile_name(pg_current_wal_lsn()),17))::bit(32)::int -
+('x'||substring(last_archived_wal,9,8))::bit(32)::int*256 -
+('x'||substring(last_archived_wal,17))::bit(32)::int
+as diff from pg_stat_archiver;
+
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+9.---View existing connection limit setting:( datconnlimit )
+
+postgres=# select datname,datallowconn,datconnlimit from pg_database where datname='test_dev';
+
+-- To set a specific limit for connection:-
+
+test_dev=# alter database test_dev connection limit 100;
+
+-- To restrict all the connections to db
+
+test_dev=# alter database test_dev connection limit 0;
+ALTER DATABASE
+
+NOTE - > EVEN IF CONNECTION LIMIT IS SET TO 0 , THE SUPERUSER WILL BE ABLE TO CONNECT TO DATABASE.
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+10.-- List down all the wal files present in pg_wal
+
+postgres=# select * from pg_ls_waldir();
+
+-- Find total size of wal:
+
+postgres=# select sum(size) from pg_ls_waldir();
+
+-- Find current wal file lsn:
+
+postgres=# select pg_current_wal_insert_lsn(),pg_current_wal_lsn();
+
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+11.temp file usage on database:- 
+
+postgres=# SELECT datname, temp_files, temp_bytes, stats_reset FROM pg_stat_database;
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+12.-- Here we want to kill all session of the user postgres
+
+-- List all the session of that user.
+dbaclass#select datname as database, pid as pid, usename as username, application_name , client_addr, query FROM pg_stat_activity where username='postgres';
+
+-- Kill all the session of user postgres.
+
+dbaclass#select pg_terminate_backend(pid) from pg_stat_activity where usename='postgres';
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+13.specific table and index size:-
+
+postgres=# \d test
+Table "public.test"
+Column.     | Type    | Collation | Nullable | Default
+------------+---------+-----------+----------+---------
+sourcefile | text     |           |          |
+sourceline | integer  |           |          |
+seqno.     | integer  |           |.         |
+name.      | text     |           |          |
+setting.   | text     |           |          |
+applied   | boolean   |           |          |
+error     | text.     |           |          |
+Indexes:
+"test_idx" btree (sourcefile)
+"test_idx2" btree (sourceline)
+
+-- Find the table_size ( excluding the index_size)
+
+postgres=# SELECT pg_size_pretty (pg_relation_size('test'));
+pg_size_pretty
+----------------
+30 MB
+(1 row)
+
+-- Find the total_index size of the table
+
+postgres=# sELECT pg_size_pretty ( pg_indexes_size('test'));
+pg_size_pretty
+----------------
+26 MB
+(1 row)
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+13.-- List down all partitioned tables present in db
+
+SELECT
+nmsp_parent.nspname AS parent_schema,
+parent.relname AS parent,
+nmsp_child.nspname AS child_schema,
+child.relname AS child
+FROM pg_inherits
+JOIN pg_class parent ON pg_inherits.inhparent = parent.oid
+JOIN pg_class child ON pg_inherits.inhrelid = child.oid
+JOIN pg_namespace nmsp_parent ON nmsp_parent.oid = parent.relnamespace
+JOIN pg_namespace nmsp_child ON nmsp_child.oid = child.relnamespace
+
+-- List down all partitions of a single table:
+
+SELECT
+nmsp_parent.nspname AS parent_schema,
+parent.relname AS parent,
+nmsp_child.nspname AS child_schema,
+child.relname AS child
+FROM pg_inherits
+JOIN pg_class parent ON pg_inherits.inhparent = parent.oid
+JOIN pg_class child ON pg_inherits.inhrelid = child.oid
+JOIN pg_namespace nmsp_parent ON nmsp_parent.oid = parent.relnamespace
+JOIN pg_namespace nmsp_child ON nmsp_child.oid = child.relnamespace
+WHERE parent.relname='parent_table_name';
+
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+index:- 
+
+to see index:- 
+
+1.table wise:- 
+
+SELECT schemaname, relname AS tablename, indexrelname AS indexname, idx_scan
+FROM pg_stat_all_indexes
+WHERE relname = 'your_table_name';
+
+2.schema wise;- 
+
+SELECT
+    indexrelname AS index_name,
+    pg_size_pretty(pg_relation_size(indexrelid)) AS index_size
+FROM
+    pg_stat_all_indexes
+WHERE
+    schemaname = 'public'; -- Change 'public' to the schema name if your indexes are in a different schema
+	
+3.index size:- 
+
+SELECT
+    indexrelname AS index_name,
+    pg_size_pretty(pg_relation_size(indexrelid)) AS index_size
+FROM
+    pg_stat_user_indexes
+WHERE
+    relname = 'your_table_name';
+	
+	
+
+
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA schema_name TO username;
+
+
+--- Set Default Privileges for a Role: You can set default privileges for a role so 
+that any objects created by this role will have the specified permissions.
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA your_schema
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO your_role;
+
+
+---------- Set Default Privileges for a Specific User:-
+You can also specify default privileges for objects created by a specific user.
+
+
+
+ALTER DEFAULT PRIVILEGES FOR USER your_user IN SCHEMA your_schema
+GRANT SELECT, INSERT, UPDATE ON TABLES TO your_role;
+
+
+
+GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA bkp TO pennantvendor; 
+
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA bkp 
+GRANT SELECT, INSERT, UPDATE ON TABLES TO pennantvendor;
+
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA bkp
+REVOKE SELECT, INSERT, UPDATE ,DELETE ON TABLES FROM pennantvendor;
+
+
+
+
+
+GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA schema_name TO username;
+
+
+
+
+plf, plfaudit, plfsnap, bkp
+
+
+GRANT CONNECT ON DATABASE "PRODPLFM" TO "pennantvendor";
+
+GRANT USAGE ON SCHEMA "plf","plfaudit","plfsnap","bkp" TO "pennantvendor";
+
+GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA "plf","plfaudit","plfsnap","bkp" TO "pennantvendor";
+
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA "plf","plfaudit","plfsnap","bkp" TO "pennantvendor";
+ 
+ 
+ALTER DEFAULT PRIVILEGES IN SCHEMA "plf","plfaudit","plfsnap","bkp"
+GRANT SELECT, INSERT, UPDATE ON TABLES TO "pennantvendor";
+
+---------------------------------------------------------------------------------------------------------------------------------------------------
+
+Setting search_path Permanently:-
+
+1.At the Database Level:
+
+ALTER DATABASE mydatabase SET search_path TO "$user", used_schema;
+
+2.At the User Level:-
+
+ALTER ROLE myuser SET search_path TO "$user", used_schema;
+
+----------------------------------------------------------------------------------------------------------------------------------------------------
+
+percentage column displays the results of dead tuple percentage:- 
+
+SELECT relname, n_dead_tup, n_live_tup, 100*n_dead_tup/n_live_tup AS percent, left(last_vacuum::text,16) AS last_vacuum, 
+left(last_autovacuum::text,16) AS last_autovacuum, last_analyze, left(last_autoanalyze::text,16) AS last_autoanalyze, 
+now() FROM pg_stat_user_tables ;
+
+----------------------------------------------------------------------------------------------------------------------------------------------------
+
+To Get constraints on partitioned tables and their child tables:-
+
+SELECT
+    tc.table_schema AS schemaname,
+    tc.table_name AS tablename,
+    tc.constraint_name,
+    tc.constraint_type,
+    ccu.column_name
+FROM
+    information_schema.table_constraints tc
+    JOIN information_schema.constraint_column_usage ccu ON tc.constraint_name = ccu.constraint_name
+WHERE
+    tc.table_schema IN ('public')
+    AND tc.table_name LIKE '%sale%'
+ORDER BY
+    tc.table_schema,
+    tc.table_name,
+    tc.constraint_name;
+------------------------------------------------------------------------------------------------------------------------------------------------	
+o Get indexes on partitioned tables and their child tables:-
+
+SELECT
+    t.schemaname,
+    t.tablename,
+    i.indexname,
+    i.indexdef
+FROM
+    pg_tables t
+    JOIN pg_indexes i ON t.schemaname = i.schemaname AND t.tablename = i.tablename
+WHERE
+    t.schemaname IN ('public')
+    AND t.tablename LIKE '%sale%'
+ORDER BY
+    t.schemaname,
+    t.tablename,
+    i.indexname;
+	
+-------------------------------------------------------------------------------------------------------------------------------------------------
+
+Row count all table:-
+
+select table_schema, 
+       table_name, 
+       (xpath('/row/cnt/text()', xml_count))[1]::text::int as row_count
+from (
+  select table_name, table_schema, 
+         query_to_xml(format('select count(*) as cnt from %I.%I', table_schema, table_name), false, true, '') as xml_count
+  from information_schema.tables
+  where table_schema = 'public' --<< change here for the schema you want
+) t order by row_count desc;
+
+---------------------------------------------------------------------------------------------------------------------------------------------------
+
+How do you check the top IOPs intensive queries in PostgreSQL DB?
+
+Set PostgreSQL configuration parameter
+
+track_io_timing = 1;
+
+
+Query1:- 
+
+SELECT 
+ (select datname from pg_database where oid=dbid) datname,
+ query,
+ blk_read_time + blk_write_time AS io_time
+FROM pg_stat_statements
+ORDER BY blk_read_time + blk_write_time DESC
+LIMIT 20
+
+Query2:-
+
+with
+a as (select dbid, queryid, query, blk_read_time r, blk_write_time w from pg_stat_statements),
+b as (select dbid, queryid, query, blk_read_time r, blk_write_time w from pg_stat_statements, pg_sleep(1))
+select
+ pd.datname as db_name, 
+ substr(a.query, 1, 2000) as the_query, 
+ round(sum(b.r-a.r)) as blk_reads_per_sec,
+ round(sum(b.w-a.w)) as blk_writes_per_sec,
+ round(sum(b.r-a.r) + sum(b.w-a.w)) as iops
+from a, b, pg_database pd
+where 
+ a.dbid= b.dbid 
+and 
+ a.queryid = b.queryid 
+and 
+ pd.oid=a.dbid
+group by 1, 2
+having sum(b.r-a.r) + sum(b.w-a.w) > 0
+order by 5 desc
+limit 20; 
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------------
+
+Identifying Table Bloat:-
+
+SELECT c.oid::regclass AS relation_name,
+       greatest(age(c.relfrozenxid), age(t.relfrozenxid)) AS age,
+       pg_size_pretty(pg_table_size(c.oid)) AS table_size,
+       c.relkind, 
+       c.relpersistence
+FROM pg_class c
+LEFT JOIN pg_class t ON c.reltoastrelid = t.oid
+WHERE c.relkind IN ('r', 't', 'm')
+ORDER BY 2 DESC
+LIMIT 20;
+
+
+--------------------------------------------------------------------------------------------------------------------
+
+SELECT
+
+    usename,
+
+    COUNT(*) as connection_count,
+
+    MAX(backend_start) as last_backend_start
+
+FROM
+
+    pg_stat_activity
+
+WHERE
+
+    state = 'idle'
+
+GROUP BY
+
+    usename;
+
+ 
+Database
+ 
+User level
+ 
+Backups@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ 
+----------Table backup-----------
+
+pg_dump -U postgres -d mcollect-Bank-Prod-DB --table=user_table > user_table_backup_file.sql
+ 
+Replication@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ 
+--------------------------Replication lag--------------------
+
+select now() - pg_last_xact_replay_timestamp() as replication_delay;
+ 
+SELECT
+
+  pg_is_in_recovery() AS is_slave,
+
+  pg_last_wal_receive_lsn() AS receive,
+
+  pg_last_wal_replay_lsn() AS replay,
+
+  pg_last_wal_receive_lsn() = pg_last_wal_replay_lsn() AS synced,
+
+  (
+
+   EXTRACT(EPOCH FROM now()) -
+
+   EXTRACT(EPOCH FROM pg_last_xact_replay_timestamp())
+
+  )::int AS lag;
+
+  ---------uptime---------------------------
+
+  SELECT now() - pg_postmaster_start_time() AS uptime;
+
+  -------------------------------Blocking query-----------------------------
+
+   SELECT
+
+    activity.pid,
+
+    activity.usename,
+
+    activity.query,
+
+    blocking.pid AS blocking_id,
+
+    blocking.query AS blocking_query
+
+FROM pg_stat_activity AS activity
+
+JOIN pg_stat_activity AS blocking ON blocking.pid = ANY(pg_blocking_pids(activity.pid));
+
+=======================================================================================
+
+SELECT
+
+    waiting.pid AS waiting_pid,
+
+    waiting.usename AS waiting_user,
+
+    waiting.query AS waiting_query,
+
+    waiting.wait_event_type AS waiting_event_type,
+
+    waiting.wait_event AS waiting_event,
+
+    blocking.pid AS blocking_pid,
+
+    blocking.usename AS blocking_user,
+
+    blocking.query AS blocking_query
+
+FROM
+
+    pg_stat_activity waiting
+
+JOIN
+
+    pg_locks waiting_locks ON waiting.pid = waiting_locks.pid
+
+JOIN
+
+    pg_locks blocking_locks ON waiting_locks.locktype = blocking_locks.locktype
+
+    AND waiting_locks.database IS NOT DISTINCT FROM blocking_locks.database
+
+    AND waiting_locks.relation IS NOT DISTINCT FROM blocking_locks.relation
+
+    AND waiting_locks.page IS NOT DISTINCT FROM blocking_locks.page
+
+    AND waiting_locks.tuple IS NOT DISTINCT FROM blocking_locks.tuple
+
+    AND waiting_locks.virtualxid IS NOT DISTINCT FROM blocking_locks.virtualxid
+
+    AND waiting_locks.transactionid IS NOT DISTINCT FROM blocking_locks.transactionid
+
+    AND waiting_locks.classid IS NOT DISTINCT FROM blocking_locks.classid
+
+    AND waiting_locks.objid IS NOT DISTINCT FROM blocking_locks.objid
+
+    AND waiting_locks.objsubid IS NOT DISTINCT FROM blocking_locks.objsubid
+
+    AND blocking_locks.granted
+
+JOIN
+
+    pg_stat_activity blocking ON blocking.pid = blocking_locks.pid
+
+WHERE
+
+    waiting_locks.granted IS FALSE;
+ 
+==================Using pg_stat_bgwriter: Provides information about the background writer process.=======
+
+SELECT
+
+    checkpoints_timed,
+
+    checkpoints_req,
+
+    checkpoint_write_time,
+
+    checkpoint_sync_time,
+
+    buffers_checkpoint,
+
+    buffers_clean,
+
+    maxwritten_clean,
+
+    buffers_backend,
+
+    buffers_backend_fsync,
+
+    buffers_alloc,
+
+    stats_reset
+
+FROM pg_stat_bgwriter;
+
+===============================connection as per user=================
+
+SELECT
+
+    usename,
+
+    COUNT(*) as connection_count,
+
+    MAX(backend_start) as last_backend_start
+
+FROM
+
+    pg_stat_activity
+
+WHERE
+
+    state = 'idle'
+
+GROUP BY
+
+    usename;
+ 
+======================Using pg_stat_database: Provides statistics about database-wide activities.==================
+ 
+SELECT
+
+    datname,
+
+    numbackends,
+
+    xact_commit,
+
+    xact_rollback,
+
+    blks_read,
+
+    blks_hit,
+
+    tup_returned,
+
+    tup_fetched,
+
+    tup_inserted,
+
+    tup_updated,
+
+    tup_deleted,
+
+    conflicts,
+
+    temp_files,
+
+    temp_bytes,
+
+    deadlocks,
+
+    blk_read_time,
+
+    blk_write_time,
+
+    stats_reset
+
+FROM pg_stat_database
+
+ORDER BY datname;
+ 
+======================how to check index 
+
+SELECT
+
+    indexname,
+
+    indexdef
+
+FROM
+
+    pg_indexes
+
+WHERE
+
+    tablename = 'max_mtr_view';
+ 
+--------------
+
+select pid,
+
+       usename,
+
+       pg_blocking_pids(pid) as blocked_by,
+
+       query as blocked_query
+
+from pg_stat_activity
+
+where cardinality(pg_blocking_pids(pid)) > 0;
+ 
+-----------kill idle query-----------------------------
+
+SELECT pg_terminate_backend(pg_stat_activity.pid)
+
+FROM pg_stat_activity
+
+WHERE state = 'idle';
+ 
+====Query killing===========
+
+SELECT pg_terminate_backend(pid);
+ 
+---------------------table locks--------
+
+SELECT
+
+    t.relname AS table_name,
+
+    l.locktype,
+
+    l.mode,
+
+    l.granted
+
+FROM
+
+    pg_catalog.pg_locks l
+
+JOIN
+
+    pg_catalog.pg_class t
+
+ON
+
+    l.relation = t.oid
+
+WHERE
+
+    t.relkind = 'r';
+
+
+------------------------------
+ 
+SELECT
+
+    c2.relname AS index_name,
+
+    i.indisprimary AS is_primary,
+
+    i.indisunique AS is_unique,
+
+    pg_get_indexdef(i.indexrelid) AS index_definition
+
+FROM
+
+    pg_class c,
+
+    pg_class c2,
+
+    pg_index i
+
+WHERE
+
+    c.relname = 'your_table_name'
+
+    AND c.oid = i.indrelid
+
+    AND i.indexrelid = c2.oid;
+
+=====table view dead dead_tuples=============
+ 
+SELECT relname AS table_name,
+
+       n_dead_tup AS dead_tuples
+
+FROM pg_stat_user_tables
+
+WHERE relname = 'max_mtr_view';
+ 
+ 
+================dead tuples========================
+
+select relname, n_live_tup, n_dead_tup
+
+from pg_stat_all_tables where relname not like 'pg_%' and n_dead_tup > 0
+
+group by 1, 2, 3
+
+order by 2, 3 desc;
+ 
+--------
+
+select schemaname, relname, n_live_tup,n_dead_tup from pg_stat_user_tables where n_dead_tup >=1000 order by n_dead_tup desc limit(10);
+
+--------
+ 
+select relname,schemaname, n_live_tup, n_dead_tup,last_vacuum, last_autovacuum, last_analyze, last_autoanalyze
+
+FROM pg_stat_all_tables
+
+ORDER BY n_dead_tup DESC;
+ 
+--------------Dead tuples with tables size-----
+ 
+SELECT relname AS table_name,
+
+       n_dead_tup AS dead_tuples,
+
+       pg_size_pretty(pg_relation_size(relid)) AS table_size
+
+FROM pg_stat_user_tables
+
+ORDER BY n_dead_tup DESC;
+ 
+ 
+Long running===========================
+ 
+select datname,pid,query,usesysid,usename,application_name,client_addr,state,query_start,now() - query_start AS duration from pg_stat_activity
+
+WHERE query not like 'START_REPLICATION%' and  (now() - pg_stat_activity.query_start) >interval '1 minutes' and state not like 'idle';
+ 
+ 
+Maintenance over postgres-------------
+
+==Reindex
+ 
+SELECT 'REINDEX index public.' || indexname ||';' FROM pg_indexes WHERE schemaname IN ('public');
+
+Security
+ 
+----Command to Rest pg_wal---------
+
+/usr/lib/postgresql/14/bin/pg_resetwal -f /var/lib/postgresql/14/main
+ 
+ 
+----------Analyzing Query Execution Plan---------------
+
+EXPLAIN SELECT * FROM table_name WHERE condition;
+ 
+ 
+primary_conninfo = 'user=postgres password=tsNuYpg52wYd7VLEz9nl1Mlh7CPF340beSs311BHKGYjNAVHgpXUKPXY396dxhR1 channel_binding=disable host=10.0.25.155 port=5432 sslmode=disable sslcompression=0 sslsni=1 ssl_min_protocol_version=TLSv1.2 gssencmode=disable krbsrvname=postgres target_session_attrs=any'
+ 
+ 
+=====================max_connection==
+
+1.Query to check current and used max connection in database.
+ 
+select max_conn, used, res_for_super,((max_conn - res_for_super)-used) as res_for_normal
+
+   from
+
+   (select count(*) used from pg_stat_activity) t1,
+
+   (select setting::int res_for_super from pg_settings
+
+   where name='superuser_reserved_connections') t2,
+
+   (select setting::int max_conn from pg_settings where name='max_connections') t3;
+
+=====================active locks and the sessions holding==================================  
+
+SELECT
+
+    pid,
+
+    usename,
+
+    pg_blocking_pids(pid) AS blocked_by,
+
+    query,
+
+    state,
+
+    age(clock_timestamp(), query_start) AS duration
+
+FROM
+
+    pg_stat_activity
+
+WHERE
+
+    datname = 'csb'
+
+ORDER BY
+
+    duration DESC;
+=====================================================
+
+with overridden_tables as (
+  select
+    pc.oid as table_id,
+    pn.nspname as scheme_name,
+    pc.relname as table_name,
+    pc.reloptions as options
+  from pg_class pc
+  join pg_namespace pn on pn.oid = pc.relnamespace
+  where reloptions::text ~ 'autovacuum'
+), per_database as (
+  select
+    coalesce(nullif(n.nspname || '.', 'public.'), '') || c.relname as relation,
+    greatest(age(c.relfrozenxid), age(t.relfrozenxid)) as age,
+    round(
+      (greatest(age(c.relfrozenxid), age(t.relfrozenxid))::numeric *
+      100 / (2 * 10^9 - current_setting('vacuum_freeze_min_age')::numeric)::numeric),
+      2
+    ) as capacity_used,
+    c.relfrozenxid as rel_relfrozenxid,
+    t.relfrozenxid as toast_relfrozenxid,
+    (greatest(age(c.relfrozenxid), age(t.relfrozenxid)) > 1200000000)::int as warning,
+    case when ot.table_id is not null then true else false end as overridden_settings
+  from pg_class c
+  join pg_namespace n on c.relnamespace = n.oid
+  left join pg_class t ON c.reltoastrelid = t.oid
+  left join overridden_tables ot on ot.table_id = c.oid
+  where c.relkind IN ('r', 'm') and not (n.nspname = 'pg_catalog' and c.relname <> 'pg_class')
+    and n.nspname <> 'information_schema'
+  order by 3 desc)
+SELECT *
+FROM per_database;
+
+===================================================================================================================
+
+WITH conflicts(lock, conflict) AS (VALUES
+    ('AccessShare', 'AccessExclusive'), ('RowShare', 'Exclusive'),
+    ('RowShare', 'AccessExclusive'), ('RowExclusive', 'Share'),
+    ('RowExclusive', 'ShareRowExclusive'), ('RowExclusive', 'Exclusive'),
+    ('RowExclusive', 'AccessExclusive'), ('ShareUpdateExclusive', 'ShareUpdateExclusive'),
+    ('ShareUpdateExclusive', 'Share'), ('ShareUpdateExclusive', 'ShareRowExclusive'),
+    ('ShareUpdateExclusive', 'Exclusive'), ('ShareUpdateExclusive', 'AccessExclusive'),
+    ('Share', 'RowExclusive'), ('Share', 'ShareUpdateExclusive'),
+    ('Share', 'ShareRowExclusive'), ('Share', 'Exclusive'),
+    ('Share', 'AccessExclusive'), ('ShareRowExclusive','RowExclusive'),
+    ('ShareRowExclusive', 'ShareUpdateExclusive'), ('ShareRowExclusive', 'Share'),
+    ('ShareRowExclusive', 'ShareRowExclusive'), ('ShareRowExclusive', 'Exclusive'),
+    ('ShareRowExclusive', 'AccessExclusive'), ('Exclusive', 'RowShare'),
+    ('Exclusive', 'RowExclusive'), ('Exclusive', 'ShareUpdateExclusive'),
+    ('Exclusive', 'Share'), ('Exclusive', 'ShareRowExclusive'),
+    ('Exclusive', 'Exclusive'), ('Exclusive', 'AccessExclusive'),
+    ('AccessExclusive', 'AccessShare'), ('AccessExclusive', 'RowShare'),
+    ('AccessExclusive', 'RowExclusive'), ('AccessExclusive', 'ShareUpdateExclusive'),
+    ('AccessExclusive', 'Share'), ('AccessExclusive', 'ShareRowExclusive'),
+    ('AccessExclusive','Exclusive'), ('AccessExclusive','AccessExclusive')
+),
+activity AS (
+    SELECT
+        datname,
+        pid,
+        usename,
+        application_name,
+        client_addr,
+        xact_start,
+        query_start,
+        state_change,
+        backend_xid,
+        backend_xmin,
+        state,
+        wait_event_type,
+        wait_event,
+        query
+    FROM pg_stat_activity
+    WHERE pid != pg_backend_pid()
+),
+locks AS (
+   SELECT
+        pid,
+        locktype,
+        granted,
+        relation::regclass AS relation,
+        left(mode,-4) AS mode,
+        ROW(locktype,database,relation::regclass,page,tuple,virtualxid,transactionid,classid,objid,objsubid) AS obj
+    FROM pg_locks
+),
+pairs AS (
+    SELECT
+        w.pid AS waiter,
+        l.pid AS locker,
+        l.obj,
+        l.mode,
+        l.relation
+    FROM locks AS w
+    JOIN locks AS l ON l.obj IS NOT DISTINCT FROM w.obj AND l.locktype = w.locktype AND NOT l.pid = w.pid AND l.granted
+    WHERE NOT w.granted
+),
+leaders AS (
+    SELECT
+        DISTINCT(locker),
+        coalesce(relation, (select max(relation) from locks where pid = locker)) AS relation,
+        mode
+    FROM (SELECT *, rank() OVER (PARTITION BY locker ORDER BY relation NULLS FIRST) AS pos FROM pairs) AS ss
+    WHERE pos = 1
+),
+lock_queue AS (
+    SELECT
+        array_agg(l.pid::text || '.' || l.mode order by p.query_start) AS queue,
+        rel.relation
+    FROM locks AS l
+    JOIN activity p ON p.pid = l.pid
+    JOIN activity a ON a.pid = l.pid,
+    LATERAL (SELECT coalesce(relation, max(relation)) AS relation FROM locks WHERE pid = l.pid AND relation IS NOT NULL GROUP BY relation) AS rel
+    WHERE NOT l.granted
+    GROUP BY rel.relation
+),
+push_root_on_lock_queue AS (
+    SELECT
+        l.relation,
+        array_prepend(p.locker::text || '.' || p.mode, queue) AS queue
+    FROM lock_queue AS l
+    JOIN leaders AS p ON l.relation = p.relation
+),
+lock_queue_element_num AS (
+    SELECT
+        relation,
+        a.element,
+        a.num
+    FROM push_root_on_lock_queue, unnest(queue) WITH ORDINALITY a(element, num)
+),
+main AS (
+    SELECT
+        a.relation,
+        split_part(a.element, '.', 1) AS prev_pid,
+        split_part(a.element, '.', 2) AS prev_mode,
+        split_part(b.element, '.', 1) AS pid,
+        split_part(b.element, '.', 2) AS mode,
+        a.num AS start,
+        b.num AS next,
+        CASE
+            WHEN EXISTS (SELECT * FROM conflicts AS c WHERE c.lock = split_part(a.element, '.', 2) AND c.conflict = split_part(b.element, '.', 2)) THEN true
+            ELSE false
+        END AS conflict
+    FROM lock_queue_element_num AS a
+    JOIN lock_queue_element_num b ON a.relation = b.relation
+    WHERE a.num < b.num
+    ORDER BY b.num DESC
+),
+tree AS (
+    SELECT
+        DISTINCT ON (pid, prev_pid)
+        *,
+        dense_rank() OVER (PARTITION BY relation ORDER BY start) - 1 AS level
+    FROM main
+),
+stat AS (
+    SELECT
+        m.pid,
+        p.locker,
+        array_agg(DISTINCT m.prev_pid || ':' || m.level) AS blocked_by
+    FROM pairs AS p
+    JOIN tree AS m ON p.waiter = m.pid::int
+    WHERE conflict
+    AND m.pid != m.prev_pid
+    GROUP BY m.pid, p.locker
+),
+/* sometimes we can miss some blockers in pairs due to the lock path, the query should be fix normally but for now this is workaround
+   TODO: fix pairs query to include all path
+*/
+sub AS (
+    SELECT
+        pidd,
+        count(pidd) AS blocked_cnt
+    FROM (
+        SELECT DISTINCT ON (pid) split_part(unnest(blocked_by), ':', 1) AS pidd
+        FROM stat AS s
+    ) AS blocked_cnt
+    WHERE NOT EXISTS (SELECT FROM pairs AS p WHERE p.locker = blocked_cnt.pidd::int)
+    GROUP BY pidd
+),
+result AS (
+    /* add details of waiters */
+    SELECT
+        DISTINCT(s.pid::int),
+        s.blocked_by,
+        (clock_timestamp() - a.xact_start)::interval(0) AS ts_age,
+        (clock_timestamp() - a.state_change)::interval(0) AS change_age,
+        CASE
+            WHEN s.blocked_by = '{}' THEN NULL::interval(0)
+            ELSE (clock_timestamp() - a.query_start)::interval(0)
+        END AS blocking_age,
+        a.backend_xid AS xid,
+        a.backend_xmin AS xmin,
+        replace(a.state, 'idle in transaction', 'idletx') AS state,
+        a.datname,
+        a.usename,
+        a.client_addr,
+        a.application_name,
+        a.wait_event_type || ':' || a.wait_event AS wait,
+        blocked.cnt AS blocked_cnt,
+        CASE
+            WHEN s.blocked_by = '{}' THEN true
+            ELSE false
+        END AS root,
+        trim(trailing ';' from format(
+            '%s %s%s',
+            '[' || s.pid::text || ']',
+            coalesce(repeat('.', array_length(s.blocked_by, 1)+1), '') || ' ',
+            left(query, 1000)
+        )) AS query
+    FROM stat AS s
+    JOIN activity AS a ON s.pid::int = a.pid,
+    LATERAL (
+        SELECT
+            coalesce((CASE
+                WHEN count(p.waiter) = 0 THEN (SELECT blocked_cnt FROM sub WHERE sub.pidd = s.pid UNION ALL SELECT 0 FROM sub WHERE NOT EXISTS (SELECT FROM sub WHERE sub.pidd = s.pid))
+                ELSE count(p.waiter)
+            END), 0) AS cnt
+    FROM pairs AS p WHERE p.locker = s.pid::int)AS blocked
+    UNION ALL
+    /* add details of lockers */
+    SELECT
+        DISTINCT(p.locker::int),
+        '{}'::text[] AS blocked_by,
+        (clock_timestamp() - a.xact_start)::interval(0) AS ts_age,
+        (clock_timestamp() - a.state_change)::interval(0) AS change_age,
+        NULL::interval AS blocking_age,
+        a.backend_xid AS xid,
+        a.backend_xmin AS xmin,
+        replace(state, 'idle in transaction', 'idletx') AS state,
+        a.datname,
+        a.usename,
+        a.client_addr,
+        a.application_name,
+        a.wait_event_type || ':' || a.wait_event AS wait,
+        blocked.cnt AS blocked_cnt,
+        true AS root,
+        trim(trailing ';' from format(
+            '%s %s%s',
+            '[' || p.locker::text || ']',
+            coalesce(repeat('.', 0), '') || ' ',
+            left(query, 1000)
+        )) AS query
+    FROM pairs AS p
+    JOIN activity AS a ON p.locker::int = a.pid,
+    LATERAL (SELECT count(t.prev_pid) AS cnt FROM tree t WHERE t.prev_pid = p.locker::text) blocked
+    WHERE NOT EXISTS (SELECT FROM stat AS s WHERE s.pid::int = p.locker)
+    /* every other pids not in locker and waiter pairs */
+    UNION ALL
+    SELECT
+        DISTINCT(a.pid),
+        '{}'::text[] AS blocked_by,
+        (clock_timestamp() - a.xact_start)::interval(0) AS ts_age,
+        (clock_timestamp() - a.state_change)::interval(0) AS change_age,
+        NULL::interval AS blocking_age,
+        a.backend_xid AS xid,
+        a.backend_xmin AS xmin,
+        replace(state, 'idle in transaction', 'idletx') AS state,
+        a.datname,
+        a.usename,
+        a.client_addr,
+        a.application_name,
+        a.wait_event_type || ':' || a.wait_event AS wait,
+        0::int AS blocked_cnt,
+        true AS root,
+        trim(trailing ';' from format(
+            '%s %s%s',
+            '[' || a.pid::text || ']',
+            coalesce(repeat('.', 0), '') || ' ',
+            left(query, 1000)
+        )) AS query
+    FROM activity AS a WHERE NOT EXISTS (SELECT FROM pairs AS p WHERE p.locker = a.pid OR p.waiter = a.pid)
+    ORDER by blocked_cnt DESC, root, pid
+)
+SELECT
+    pid,
+    blocked_by,
+    ts_age,
+    change_age,
+    blocking_age,
+    xid,
+    xmin,
+    state,
+    datname,
+    usename,
+    client_addr,
+    application_name,
+    wait,
+    blocked_cnt,
+    root,
+    query
+FROM result;
+

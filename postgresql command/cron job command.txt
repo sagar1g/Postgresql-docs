@@ -1,0 +1,27 @@
+To job id:- 
+
+select * from cron.job
+
+
+to check cron job sucessfully completed or not:- 
+ 
+ SELECT 
+    j.jobid, 
+    j.schedule, 
+    j.command, 
+    r.status, 
+    r.start_time, 
+    r.end_time, 
+    r.return_message
+FROM 
+    cron.job j
+LEFT JOIN 
+    cron.job_run_details r 
+ON 
+    j.jobid = r.jobid
+WHERE 
+    j.jobid = 104
+ORDER BY 
+    r.start_time DESC
+LIMIT 40;
+ 

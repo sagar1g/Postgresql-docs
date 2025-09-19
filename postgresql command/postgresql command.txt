@@ -1,0 +1,156 @@
+1. DB User Access Details with Privileges 
+SELECT 
+    grantee AS user_name, 
+    table_catalog, 
+    table_schema, 
+    table_name, 
+    privilege_type 
+FROM 
+    information_schema.role_table_grants 
+WHERE 
+    table_schema NOT IN ('pg_catalog', 'information_schema')  -- Exclude specific schemas
+ORDER BY 
+    grantee, table_name;
+
+	------------------------------------------------
+2. Number of WAL Files
+SELECT 
+    COUNT(*) AS wal_file_count 
+FROM 
+    pg_ls_dir('pg_wal') AS wal_files;
+	+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+3. Replication Lag in Bytes
+replication  below 10 version
+SELECT 
+    pg_current_xlog_location() AS current_lsn,
+    pg_last_xlog_replay_location() AS last_replay_lsn,
+    pg_xlog_location_diff(pg_current_xlog_location(), pg_last_xlog_replay_location()) AS replication_lag_bytes
+FROM 
+    pg_stat_replication;  -- Run this on the primary server
+___________
+SELECT      above 10 version
+    pid,
+    usename,
+    application_name,
+    client_addr,
+    state,
+    pg_current_wal_lsn() AS current_lsn,
+    replay_lsn,
+    pg_current_wal_lsn() - replay_lsn AS replication_lag_bytes
+FROM 
+    pg_stat_replication;
+	------------------------------------------------------------------
+4. Buffer Hit Ratio 
+SELECT 
+    (1 - (blks_read::float / (blks_read + blks_hit))) AS buffer_hit_ratio 
+FROM 
+    pg_stat_database;
+	______________________________________________________________________________________
+5. Fragmentation Details 
+SELECT 
+    n.nspname AS schema_name,
+    c.relname AS table_name,
+    pg_total_relation_size(c.oid) AS total_size,
+    pg_indexes_size(c.oid) AS indexes_size,
+    pg_relation_size(c.oid) AS table_size,
+    pg_total_relation_size(c.oid) - pg_relation_size(c.oid) - pg_indexes_size(c.oid) AS fragmentation
+FROM 
+    pg_class c
+JOIN 
+    pg_namespace n ON n.oid = c.relnamespace
+WHERE 
+    c.relkind = 'r'  -- Only regular tables
+    AND n.nspname NOT IN ('pg_catalog', 'information_schema')  -- Exclude pg_catalog and information_schema
+ORDER BY 
+    fragmentation DESC;
+
+	_______________________________________________________________________________
+6. Current Active Queries 
+SELECT 
+    pid, 
+    usename, 
+    query, 
+    state, 
+    query_start 
+FROM 
+    pg_stat_activity 
+WHERE 
+    state = 'active';
+	_____________________________________________________________________________
+7. Long Running Queries (5 minutes) 
+SELECT 
+    pid, 
+    usename, 
+    query, 
+    state, 
+    query_start 
+FROM 
+    pg_stat_activity 
+WHERE 
+    state = 'active' 
+    AND now() - query_start > interval '5 minutes';
+	__________________________________________________________________________
+8. To Find Deadlocks -----------
+Deadlocks cannot be queried directly, but you can check the log file or the pg_locks view for lock issues. Enable deadlock logging if not already done:
+
+
+SHOW log_statement;
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+9. Locking and Blocking Operations 
+
+SELECT d.datname,
+w.locktype AS hold_lock_type,
+ha.usename AS hold_user,
+h.pid AS holder_pid,
+h.mode AS hold_mode,
+w.locktype AS waiter_lock_type,
+coalesce(c.relname, 'Connect to DB') AS relation,
+substring(ha.query FROM 1 FOR 50) AS hold_sql,
+w.pid AS waiter_pid,
+w.mode AS wait_mode,
+CURRENT_TIMESTAMP - wa.query_start AS age,
+substring(wa.query FROM 1 FOR 50) AS wait_sql
+FROM pg_locks w
+LEFT OUTER JOIN pg_class c ON w.relation = c.oid
+JOIN pg_locks h ON (w.relation = h.relation OR w.virtualxid = h.virtualxid
+OR w.transactionid = h.transactionid)
+JOIN pg_stat_activity ha ON h.pid = ha.pid
+JOIN pg_stat_activity wa ON w.pid = wa.pid
+LEFT OUTER JOIN pg_database d ON h.database = d.oid
+WHERE w.granted = FALSE AND h.granted = TRUE
+ORDER BY 7,12;
+	_______________________________________________________________________________
+10. Database Size 
+
+SELECT 
+    datname AS database_name,
+    pg_size_pretty(pg_database_size(datname)) AS size,
+    pg_database_size(datname) / (1024^3) AS size_in_gb  -- Convert to GB
+FROM 
+    pg_database
+ORDER BY 
+    pg_database_size(datname) DESC;
+	________________________________________________________________________
+11. Non-Index Big / Highest Tables 
+
+SELECT 
+    n.nspname AS schema_name,
+    c.relname AS table_name,
+    pg_total_relation_size(c.oid) AS total_size
+FROM 
+    pg_class c
+JOIN 
+    pg_namespace n ON n.oid = c.relnamespace
+WHERE 
+    c.relkind = 'r'  -- Only regular tables
+    AND n.nspname NOT IN ('pg_catalog', 'information_schema')  -- Exclude system schemas
+ORDER BY 
+    total_size DESC 
+LIMIT 10;  -- Change limit as needed
+
+______________________________________________________________
+12. Number of Concurrent Connections ---
+SELECT  COUNT(*) AS concurrent_connections FROM  pg_stat_activity;
+
+select usename,state,count(*) from pg_stat_activity group by usename,state order by 3 desc;
+___________________________________________________________

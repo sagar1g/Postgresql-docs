@@ -1,0 +1,247 @@
+Database
+ 
+User level
+ 
+Backups@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ 
+----------Table backup-----------
+pg_dump -U postgres -d mcollect-Bank-Prod-DB --table=user_table > user_table_backup_file.sql
+ 
+Replication@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+ 
+--------------------------Replication lag--------------------
+select now() - pg_last_xact_replay_timestamp() as replication_delay;
+ 
+SELECT
+  pg_is_in_recovery() AS is_slave,
+  pg_last_wal_receive_lsn() AS receive,
+  pg_last_wal_replay_lsn() AS replay,
+  pg_last_wal_receive_lsn() = pg_last_wal_replay_lsn() AS synced,
+  (
+   EXTRACT(EPOCH FROM now()) -
+   EXTRACT(EPOCH FROM pg_last_xact_replay_timestamp())
+  )::int AS lag;
+  ---------uptime---------------------------
+  SELECT now() - pg_postmaster_start_time() AS uptime;
+  -------------------------------Blocking query-----------------------------
+   SELECT
+    activity.pid,
+    activity.usename,
+    activity.query,
+    blocking.pid AS blocking_id,
+    blocking.query AS blocking_query
+FROM pg_stat_activity AS activity
+JOIN pg_stat_activity AS blocking ON blocking.pid = ANY(pg_blocking_pids(activity.pid));
+=======================================================================================
+SELECT
+    waiting.pid AS waiting_pid,
+    waiting.usename AS waiting_user,
+    waiting.query AS waiting_query,
+    waiting.wait_event_type AS waiting_event_type,
+    waiting.wait_event AS waiting_event,
+    blocking.pid AS blocking_pid,
+    blocking.usename AS blocking_user,
+    blocking.query AS blocking_query
+FROM
+    pg_stat_activity waiting
+JOIN
+    pg_locks waiting_locks ON waiting.pid = waiting_locks.pid
+JOIN
+    pg_locks blocking_locks ON waiting_locks.locktype = blocking_locks.locktype
+    AND waiting_locks.database IS NOT DISTINCT FROM blocking_locks.database
+    AND waiting_locks.relation IS NOT DISTINCT FROM blocking_locks.relation
+    AND waiting_locks.page IS NOT DISTINCT FROM blocking_locks.page
+    AND waiting_locks.tuple IS NOT DISTINCT FROM blocking_locks.tuple
+    AND waiting_locks.virtualxid IS NOT DISTINCT FROM blocking_locks.virtualxid
+    AND waiting_locks.transactionid IS NOT DISTINCT FROM blocking_locks.transactionid
+    AND waiting_locks.classid IS NOT DISTINCT FROM blocking_locks.classid
+    AND waiting_locks.objid IS NOT DISTINCT FROM blocking_locks.objid
+    AND waiting_locks.objsubid IS NOT DISTINCT FROM blocking_locks.objsubid
+    AND blocking_locks.granted
+JOIN
+    pg_stat_activity blocking ON blocking.pid = blocking_locks.pid
+WHERE
+    waiting_locks.granted IS FALSE;
+ 
+==================Using pg_stat_bgwriter: Provides information about the background writer process.=======
+SELECT
+    checkpoints_timed,
+    checkpoints_req,
+    checkpoint_write_time,
+    checkpoint_sync_time,
+    buffers_checkpoint,
+    buffers_clean,
+    maxwritten_clean,
+    buffers_backend,
+    buffers_backend_fsync,
+    buffers_alloc,
+    stats_reset
+FROM pg_stat_bgwriter;
+===============================connection as per user=================
+SELECT
+    usename,
+    COUNT(*) as connection_count,
+    MAX(backend_start) as last_backend_start
+FROM
+    pg_stat_activity
+WHERE
+    state = 'idle'
+GROUP BY
+    usename;
+ 
+======================Using pg_stat_database: Provides statistics about database-wide activities.==================
+ 
+SELECT
+    datname,
+    numbackends,
+    xact_commit,
+    xact_rollback,
+    blks_read,
+    blks_hit,
+    tup_returned,
+    tup_fetched,
+    tup_inserted,
+    tup_updated,
+    tup_deleted,
+    conflicts,
+    temp_files,
+    temp_bytes,
+    deadlocks,
+    blk_read_time,
+    blk_write_time,
+    stats_reset
+FROM pg_stat_database
+ORDER BY datname;
+ 
+======================how to check index 
+SELECT
+    indexname,
+    indexdef
+FROM
+    pg_indexes
+WHERE
+    tablename = 'max_mtr_view';
+ 
+--------------
+select pid,
+       usename,
+       pg_blocking_pids(pid) as blocked_by,
+       query as blocked_query
+from pg_stat_activity
+where cardinality(pg_blocking_pids(pid)) > 0;
+ 
+-----------kill idle query-----------------------------
+SELECT pg_terminate_backend(pg_stat_activity.pid)
+FROM pg_stat_activity
+WHERE state = 'idle';
+ 
+====Query killing===========
+SELECT pg_terminate_backend(pid);
+ 
+---------------------table locks--------
+SELECT
+    t.relname AS table_name,
+    l.locktype,
+    l.mode,
+    l.granted
+FROM
+    pg_catalog.pg_locks l
+JOIN
+    pg_catalog.pg_class t
+ON
+    l.relation = t.oid
+WHERE
+    t.relkind = 'r';
+
+------------------------------
+ 
+SELECT
+    c2.relname AS index_name,
+    i.indisprimary AS is_primary,
+    i.indisunique AS is_unique,
+    pg_get_indexdef(i.indexrelid) AS index_definition
+FROM
+    pg_class c,
+    pg_class c2,
+    pg_index i
+WHERE
+    c.relname = 'your_table_name'
+    AND c.oid = i.indrelid
+    AND i.indexrelid = c2.oid;
+=====table view dead dead_tuples=============
+ 
+SELECT relname AS table_name,
+       n_dead_tup AS dead_tuples
+FROM pg_stat_user_tables
+WHERE relname = 'max_mtr_view';
+ 
+ 
+================dead tuples========================
+select relname, n_live_tup, n_dead_tup
+from pg_stat_all_tables where relname not like 'pg_%' and n_dead_tup > 0
+group by 1, 2, 3
+order by 2, 3 desc;
+ 
+--------
+select schemaname, relname, n_live_tup,n_dead_tup from pg_stat_user_tables where n_dead_tup >=1000 order by n_dead_tup desc limit(10);
+--------
+ 
+select relname,schemaname, n_live_tup, n_dead_tup,last_vacuum, last_autovacuum, last_analyze, last_autoanalyze
+FROM pg_stat_all_tables
+ORDER BY n_dead_tup DESC;
+ 
+--------------Dead tuples with tables size-----
+ 
+SELECT relname AS table_name,
+       n_dead_tup AS dead_tuples,
+       pg_size_pretty(pg_relation_size(relid)) AS table_size
+FROM pg_stat_user_tables
+ORDER BY n_dead_tup DESC;
+ 
+ 
+Long running===========================
+ 
+select datname,pid,query,usesysid,usename,application_name,client_addr,state,query_start,now() - query_start AS duration from pg_stat_activity
+WHERE query not like 'START_REPLICATION%' and  (now() - pg_stat_activity.query_start) >interval '1 minutes' and state not like 'idle';
+ 
+ 
+Maintenance over postgres-------------
+==Reindex
+ 
+SELECT 'REINDEX index public.' || indexname ||';' FROM pg_indexes WHERE schemaname IN ('public');
+Security
+ 
+----Command to Rest pg_wal---------
+/usr/lib/postgresql/14/bin/pg_resetwal -f /var/lib/postgresql/14/main
+ 
+ 
+----------Analyzing Query Execution Plan---------------
+EXPLAIN SELECT * FROM table_name WHERE condition;
+ 
+ 
+primary_conninfo = 'user=postgres password=tsNuYpg52wYd7VLEz9nl1Mlh7CPF340beSs311BHKGYjNAVHgpXUKPXY396dxhR1 channel_binding=disable host=10.0.25.155 port=5432 sslmode=disable sslcompression=0 sslsni=1 ssl_min_protocol_version=TLSv1.2 gssencmode=disable krbsrvname=postgres target_session_attrs=any'
+ 
+ 
+=====================max_connection==
+1.Query to check current and used max connection in database.
+ 
+select max_conn, used, res_for_super,((max_conn - res_for_super)-used) as res_for_normal
+   from
+   (select count(*) used from pg_stat_activity) t1,
+   (select setting::int res_for_super from pg_settings
+   where name='superuser_reserved_connections') t2,
+   (select setting::int max_conn from pg_settings where name='max_connections') t3;
+=====================active locks and the sessions holding==================================  
+SELECT
+    pid,
+    usename,
+    pg_blocking_pids(pid) AS blocked_by,
+    query,
+    state,
+    age(clock_timestamp(), query_start) AS duration
+FROM
+    pg_stat_activity
+WHERE
+    datname = 'csb'
+ORDER BY
+    duration DESC;

@@ -1,0 +1,86 @@
+SELECT 'ALTER TABLE '|| schemaname || '."' || tablename ||'" OWNER TO db_lightfinance;'
+FROM pg_tables WHERE NOT schemaname IN ('pg_catalog', 'information_schema','digital_collections_lightfinance')
+ORDER BY schemaname, tablename;
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+select schemaname,tablename FROM pg_tables WHERE NOT schemaname IN ('pg_catalog', 'information_schema','digital_collections_lightfinance');
+
+
+select 'Alter table '||t.schemaname||'.'||t.tablename ||' owner to db_lightfinance;' from pg_tables t where schemaname='mcollect_lmf';
+
+
+SELECT 'ALTER TABLE ' || schemaname || '.' || tablename || ' OWNER TO db_lightfinance;'
+FROM pg_tables
+WHERE schemaname = 'mcollect_lmf';
+
+
+psql  -U postgres -d lightfinance -f owner.sql
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+index:-
+SELECT schemaname,
+       tablename,
+       indexname,
+       indexdef
+FROM pg_indexes
+WHERE schemaname NOT LIKE 'pg_%'  -- Exclude system schemas
+  AND schemaname != 'information_schema'
+ORDER BY schemaname, tablename;
+
+table count:-
+SELECT schemaname,
+       tablename,
+       pg_size_pretty(pg_total_relation_size(schemaname || '.' || tablename)) AS total_size,
+       pg_size_pretty(pg_relation_size(schemaname || '.' || tablename)) AS data_size,
+       pg_size_pretty(pg_total_relation_size(schemaname || '.' || tablename) - pg_relation_size(schemaname || '.' || tablename)) AS index_size,
+       (SELECT reltuples FROM pg_class WHERE relname = tablename) AS row_count
+FROM pg_tables
+WHERE schemaname NOT LIKE 'pg_%'  -- Exclude system schemas
+  AND schemaname != 'information_schema'
+ORDER BY schemaname, tablename;
+
+non-index:-
+SELECT schemaname,
+       tablename
+FROM pg_tables
+WHERE schemaname NOT LIKE 'pg_%'  -- Exclude system schemas
+  AND schemaname != 'information_schema'
+  AND tablename NOT IN (
+    SELECT table_name
+    FROM information_schema.tables
+    WHERE table_schema = 'EDMS '  -- Adjust the schema name as needed
+  )
+ORDER BY schemaname, tablename;
+
+SELECT
+    tablename,
+    indexname,
+    indexdef
+FROM
+    pg_indexes
+WHERE
+    schemaname = 'EDMS'
+ORDER BY
+    tablename,
+    indexname;
+	
+	
+SELECT schemaname, tablename
+FROM pg_tables
+WHERE schemaname NOT LIKE 'pg_%'  -- Exclude system schemas
+  AND schemaname != 'information_schema'
+  AND tablename NOT IN (
+    SELECT DISTINCT tablename
+    FROM pg_indexes
+    WHERE schemaname NOT LIKE 'pg_%'  -- Exclude system schemas
+      AND schemaname != 'information_schema'
+  )
+ORDER BY schemaname, tablename;
+
+
+
+

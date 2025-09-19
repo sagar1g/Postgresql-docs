@@ -1,0 +1,1515 @@
+https://www.mydbops.com/blog/postgresql-17-convert-streaming-replica-to-logical-replication-with-pg-createsubscriber
+
+####################################################################################################################
+
+GCP backup command:- 
+ gcloud storage cp gs://server-case-logs/dev-DB-backup/all_dbs_in_22_11_24.sql /backup
+ ===============================================================================================
+ 🔥 Key SAR Commands for PostgreSQL Tuning
+📌 Check CPU Usage:
+sar -u 5 10
+(Shows CPU usage every 5 sec for 10 intervals)
+
+=====================================================================
+📌 Check Memory Utilization:
+sar -r 5 10
+(Identify memory pressure that affects PostgreSQL performance)
+
+=======================================================================
+📌 Analyze Disk I/O Bottlenecks:
+sar -d 5 10
+(Find slow disks affecting query execution time)
+
+============================================================================
+📌 Check System Load:
+sar -q 5 10
+(Ensure system load is balanced with PostgreSQL workloads)
+
+🔧 PostgreSQL Tuning Based on SAR Insights
+✔️ High CPU usage? Optimize query execution plans (EXPLAIN ANALYZE)
+✔️ High memory usage? Tune work_mem, shared_buffers, and temp_buffers
+✔️ Slow disk I/O? Optimize checkpoint tuning (checkpoint_timeout) and use SSD storage
+✔️ Too many active connections? Implement PgBouncer for better connection pooling
+ ==========================================================================================================================
+ New command:- 
+ 1.psql -c "SELECT inet_server_addr();"
+
+ 
+ 
+ ======================================================================================================================
+ 
+ To last analyze:- 
+ SELECT relname, last_autovacuum, last_autoanalyze
+FROM pg_stat_all_tables
+ORDER BY GREATEST(
+    EXTRACT(EPOCH FROM (now()-last_autovacuum)),
+    EXTRACT(EPOCH FROM (now()-last_autoanalyze))
+) ASC;
+
+==============================================================================================
+
+**to see systemctl command avialble on enivronment-
+
+1.sudo systemctl list-units --type=service --all | grep postgresql
+
+to show data directory & all information:- 
+
+pg_lsclusters
+
+ SELECT
+    date_trunc('day', backend_start) AS connection_date,
+    datname AS database_name,
+    COUNT(*) AS total_connections
+FROM pg_stat_activity
+GROUP BY connection_date, datname
+ORDER BY connection_date DESC, total_connections DESC;
+
+==========================================================================
+pg_stat_statments:- 
+
+cpu load :- 
+
+SELECT query, 
+       calls, 
+       total_exec_time, 
+       mean_exec_time, 
+       stddev_exec_time, 
+       rows, 
+       (total_exec_time / calls) AS avg_exec_time,
+       (total_exec_time / SUM(total_exec_time) OVER()) * 100 AS cpu_load_percentage
+FROM pg_stat_statements 
+ORDER BY total_exec_time DESC 
+LIMIT 10;
+
+WITH total_time AS (
+    SELECT SUM(total_exec_time) AS total_time_all_queries FROM pg_stat_statements
+)
+SELECT
+    query,
+    calls,
+    total_exec_time,
+    mean_exec_time,
+    ROUND((total_exec_time / total_time.total_time_all_queries)::numeric * 100, 2) AS cpu_load_percentage
+FROM pg_stat_statements, total_time
+ORDER BY total_exec_time DESC
+LIMIT 10;
+
+================================================================================================
+
+user Role & permission check command:- 
+
+SELECT
+    rolname AS user_name,
+    oid AS user_id,
+    rolsuper AS is_superuser,
+    rolinherit AS can_inherit,
+    rolcreaterole AS can_create_role,
+    rolcreatedb AS can_create_db,
+    rolcanlogin AS can_login,
+    rolreplication AS can_replicate,
+    rolbypassrls AS bypass_rls,
+    rolvaliduntil AS account_expiry
+FROM pg_roles
+ORDER BY rolname;
+ 
+ 
+
+
+=====================================================================================
+
+COPY (
+    SELECT
+        activity.pid,
+        activity.usename,
+        activity.query,
+        blocking.pid AS blocking_id,
+        blocking.query AS blocking_query
+    FROM pg_stat_activity AS activity
+    JOIN pg_stat_activity AS blocking 
+        ON blocking.pid = ANY(pg_blocking_pids(activity.pid))
+) TO '/path/to/output_file.csv' WITH (FORMAT csv, HEADER);
+
+================================================================================
+ /usr/lib/postgresql/14/bin/pg_archivecleanup -d /archival  00000001000022EF00000055
+
+/usr/lib/pgsql-15.6/bin/pg_archivecleanup -n /archival 000002DA0000039300000063
+
+
+===================================================================================
+
+schema wise table count(see how table present in schema):- 
+
+SELECT table_schema, COUNT(*) AS table_count
+FROM information_schema.tables
+WHERE table_type = 'BASE TABLE'
+GROUP BY table_schema
+ORDER BY table_count DESC;
+
+SELECT COUNT(*) AS table_count
+FROM information_schema.tables
+WHERE table_schema = 'your_schema_name'
+  AND table_type = 'BASE TABLE';
+
+
+table_type:- 
+1.BASE TABLE 3.FOREIGN TABLE  4.LOCAL TEMPORARY
+2.VIEW
+======================================================================================================================
+SELECT oid 
+FROM pg_class 
+WHERE relname = 't_bppdata_3p';
+
+
+SELECT oid, relname, relnamespace FROM pg_class WHERE oid = 231109;
+
+SELECT * FROM pg_depend WHERE refobjid = 231109;
+SELECT * FROM pg_attribute WHERE attrelid = 231109;
+SELECT * FROM pg_constraint WHERE conrelid = 231109;
+
+
+SELECT pg_size_pretty(pg_total_relation_size('public.Collections')) AS table_size;
+
+
+Gaurav1706@
+
+check point website:- 
+https://medium.com/@wasiualhasib/checkpoint-process-in-postgresql-c5f362a5e296
+
+
+export PG_CONFIG=/usr/lib/pgsql-10.2/bin/pg_config
+
+=======================================================================================================================
+#postgresql startup time and uptime:- 
+
+1.Uptime serevr:- 
+postgres# SELECT now() - pg_postmaster_start_time()  as postgres_uptime;
+
+2. startup time :- 
+
+postgres# SELECT pg_postmaster_start_time() as postgres_startup_time;
+
+3.replication lag:- 
+
+select now() -pg_last_xact_replay_timestamp() as replication_lag;select now() -pg_last_xact_replay_timestamp() as replication_lag;
+
+SELECT name, setting, source, sourcefile, sourceline FROM pg_settings WHERE name = 'wal_keep_size';
+
+
+
+=======================================================================================================================
+
+##########Check the Current Statistics
+
+SELECT relname, last_analyze
+FROM pg_stat_all_tables
+WHERE relname = 'collections';
+
+
+
+
+#####################################################################
+
+To see which query hold space on pgsql_temp
+
+SELECT pid, usename, datname, query, state, wait_event_type, wait_event
+FROM pg_stat_activity
+WHERE wait_event_type = 'BufferPin' OR wait_event_type = 'IO';
+
+
+#################To check dependence":- 
+
+SELECT 
+    dep.deptype, 
+    rel.relname AS dependent_table, 
+    dep.refobjid, 
+    ref_rel.relname AS referenced_table
+FROM 
+    pg_depend dep
+JOIN 
+    pg_class rel ON dep.objid = rel.oid
+JOIN 
+    pg_class ref_rel ON dep.refobjid = ref_rel.oid
+WHERE 
+    ref_rel.relname = 'Table_name';
+	
+
+
+
+########index search:- 
+
+
+SELECT *
+FROM pg_indexes
+WHERE indexname = 'your_index_name' 
+  AND schemaname = 'your_schema_name';
+
+
+SELECT indexname
+FROM pg_indexes
+WHERE tablename = 'your_table_name'
+  AND indexname = 'your_index_name';
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------
+Function Query:- 
+
+SELECT 
+    f.funcid, 
+    n.nspname AS schemaname, 
+    p.proname AS funcname, 
+    f.calls, 
+    f.total_time, 
+    f.self_time
+FROM 
+    pg_stat_user_functions f
+JOIN 
+    pg_proc p ON f.funcid = p.oid
+JOIN 
+    pg_namespace n ON p.pronamespace = n.oid
+ORDER BY 
+    f.total_time DESC;
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------
+
+To change owner of that funaction:- 
+
+SELECT 'ALTER FUNCTION ' || n.nspname || '.' || p.proname || ' OWNER TO zinghr_admin;' 
+FROM pg_proc p 
+JOIN pg_namespace n ON p.pronamespace = n.oid 
+WHERE n.nspname IN ('public') 
+AND pg_catalog.pg_get_userbyid(p.proowner) = 'mr_admin'
+ORDER BY n.nspname, p.proname;
+
+SELECT 'ALTER FUNCTION ' || n.nspname || '.' || p.proname || ' OWNER TO zinghr_admin;' 
+FROM pg_proc p 
+JOIN pg_namespace n ON p.pronamespace = n.oid 
+WHERE n.nspname IN ('public') 
+ORDER BY n.nspname, p.proname;
+
+ To see all function :-  
+ 
+SELECT n.nspname AS schema_name,
+       p.proname AS function_name,
+       r.rolname AS owner
+FROM pg_proc p
+JOIN pg_namespace n ON p.pronamespace = n.oid
+JOIN pg_roles r ON p.proowner = r.oid
+WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
+ORDER BY schema_name, function_name;
+
+
+SELECT n.nspname AS schema_name,
+       p.proname AS function_name,
+       r.rolname AS owner
+FROM pg_proc p
+JOIN pg_namespace n ON p.pronamespace = n.oid
+JOIN pg_roles r ON p.proowner = r.oid
+WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
+  AND p.proname = ''  -- Replace 'my_function' with your specific function name
+ORDER BY schema_name, function_name;
+
+
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------------
+
+User mangement:- 
+
+1.to check view permission:- 
+
+SELECT 
+    grantee,
+    privilege_type
+FROM 
+    information_schema.role_table_grants
+WHERE 
+    table_name = 'view_name' AND 
+    table_schema = 'schema_name';
+
+
+
+2.
+SELECT grantee, table_schema, table_name, privilege_type
+FROM information_schema.role_table_grants
+WHERE grantee = 'nehajadhav.ext';
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------
+===================================================================================
+2.drop database database_name with(force);
+
+===================================================================================
+subscription drop:- 
+
+postgres=# ALTER SUBSCRIPTION test_sub DISABLE;
+postgreq=# ALTER SUBSCRIPTION test_sub SET (slot_name=NONE);
+postgres=# DROP SUBSCRIPTION test_sub;
+
+===================================================================================
+
+3.pg_ctl -o '--config-file=/../postgresql.conf' -D /pg/data/13.6/ --------------------------------------start postgresql service (specific path configuration file)
+
+4.select sourcefile, name, setting from pg_file_settings; ---------------------------(to see config file setting)
+
+5.select pending_restart from pg_settings where name = 'work_mem'; ----------------------(to pending restart after changing parameter)
+
+pg_controldata /path/to/data_directory | grep "Latest checkpoint's TimeLineID"
+
+sar -u -f /var/log/sa/sa$(date +%d -d today) -s 08:00:01 -e 08:30:00
+
+ ls -l  | awk '$6 == "Apr" && $7 == "30" && $8 >= "12:00" && $8 < "13:00" {print}' | wc -l
+-------------------------------------------------------------------------------------------------------------------------------------------
+Repliaction check:- 
+
+1.SELECT
+  pg_is_in_recovery() AS is_slave,
+  pg_last_wal_receive_lsn() AS receive,
+  pg_last_wal_replay_lsn() AS replay,
+  pg_last_wal_receive_lsn() = pg_last_wal_replay_lsn() AS synced,
+  (
+   EXTRACT(EPOCH FROM now()) -
+   EXTRACT(EPOCH FROM pg_last_xact_replay_timestamp())
+  )::int AS lag;
+  
+  
+=========================================
+wal growth day wise:-
+
+SELECT to_char(modification, 'YYYY-MM-DD') AS wal_date, 
+       count(*) AS wal_count, 
+       pg_size_pretty(SUM(size)) AS total_wal_size
+FROM pg_ls_waldir()
+GROUP BY wal_date
+ORDER BY wal_date DESC;
+
+=========================================================
+  
+  
+wal file details:-   
+
+SELECT now() wal_capture_time,
+        wal_records,
+        wal_fpi,
+        wal_bytes,
+        wal_buffers_full,
+        wal_write,
+        wal_write_time,
+        wal_sync_time,
+        stats_reset
+FROM   pg_stat_wal;
+
+Query to Check WAL Reading and Replay Frequency on Standby:
+
+SELECT
+    pg_last_wal_receive_lsn() AS last_wal_received,
+    pg_last_wal_replay_lsn() AS last_wal_replayed,
+    pg_last_xact_replay_timestamp() AS last_replay_time,
+    now() - pg_last_xact_replay_timestamp() AS replication_delay,
+    CASE
+        WHEN pg_last_wal_receive_lsn() = pg_last_wal_replay_lsn() THEN 'In sync'
+        ELSE 'Lagging'
+    END AS status,
+    now() AS current_time
+\watch 1;
+
+ watch -n 5 "psql -U postgres -d postgres -c \"SELECT now()-pg_last_xact_replay_timestamp() AS replication_lag;\""
+
+------------------------------------------------
+to see how much wal file generate:- 
+
+select date_trunc('hour',modification) date, count(*) No_of_WAL, trunc((sum(size)/(1024*1024*1024)),2) size_in_GB from pg_ls_waldir() group by date_trunc('hour',modification) 
+order by date_trunc('hour',modification) asc;
+
+
+select pg_size_pretty(pg_wal_lsn_diff ('28/F0F29A10', '27/98837250')) as wal_generated
+----------------------------------------------------------
+select pg_wal_replay_resume():- it is used to resume WAL (Write-Ahead Logging) replay after it has been paused, typically in the context of replication.
+
+select pg_wal_replay_pause():- it is used to pause WAL (Write-Ahead Logging) replay after it has been paused, typically in the context of replication.
+
+
+----------------------------------------------------------------- 
+SELECT
+   CASE
+     WHEN pg_is_in_recovery()
+     THEN now() - pg_last_xact_replay_timestamp()
+     ELSE NULL
+   END AS replication_lag;  
+
+2. select pg_is_in_recovery(),pg_is_wal_replay_paused(), pg_last_wal_receive_lsn(), pg_last_wal_replay_lsn(), pg_last_xact_replay_timestamp();
+
+3.SELECT EXTRACT(EPOCH FROM now() - pg_last_xact_replay_timestamp())/60 AS replication_lag_minutes; --------------------(lag convert into minutes)
+
+4. select now() -pg_last_xact_replay_timestamp() as replication_lag;   ----------------(lag)
+  
+pg_is_in_recovery(): (boolean) True if recovery is still in progress.
+pg_last_wal_receive_lsn()/pg_last_xlog_receive_location():  (pg_lsn) The write-ahead log location received and synced to disk by streaming replication.
+pg_last_wal_replay_lsn()/pg_last_xlog_replay_location():  (pg_lsn) The last write-ahead log location replayed during recovery. If recovery is still in progress this will increase monotonically.
+pg_last_xact_replay_timestamp():  (timestamp with time zone) Get timestamp of last transaction replayed during recovery.
+
+
+5. select pg_is_in_recovery();
+
+t (true) → The server is in standby mode (replica), following WALs from the primary.
+f (false) → The server is a primary (master).
+
+
+6.Through  LSN Number see what is wal file :- 
+
+SELECT pg_walfile_name('261E/8981B5C8');
+
+ 
+----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+If wal file damage we can use below commnad: -
+postgres@drdatabase:~$ /usr/lib/postgresql/14/bin/pg_resetwal -f /var/lib/postgresql/14/main
+
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+ ls -lrth | grep "Mar  5" | awk '{print $9}' | xargs du -sch
+
+
+***************To see active connection count***********************************************************************************************8
+SELECT count(*) FROM pg_stat_activity where state='idle';
+
+
+SELECT usename, application_name, client_addr, client_hostname, client_port, backend_start, state
+FROM pg_stat_activity where state='active';
+
+
+SELECT usename, application_name, client_addr, client_hostname, client_port, backend_start, state
+FROM pg_stat_activity ;
+
+
+SELECT
+    usename,client_addr,
+    COUNT(*) as connection_count,
+    MAX(backend_start) as last_backend_start
+FROM
+    pg_stat_activity
+WHERE
+    state = 'idle'
+GROUP BY
+    usename,client_addr;
+	
+===============================connection as per user=================
+SELECT
+    usename,
+    COUNT(*) as connection_count,
+    MAX(backend_start) as last_backend_start
+FROM
+    pg_stat_activity
+WHERE
+    state = 'idle'
+GROUP BY
+    usename;
+	
+=======================Connection Count per Database per day 
+
+SELECT 
+
+    date_trunc('day', backend_start) AS connection_date,
+
+    datname AS database_name,
+
+    COUNT(*) AS total_connections
+
+FROM pg_stat_activity
+
+GROUP BY connection_date, datname
+
+ORDER BY connection_date DESC, total_connections DESC;
+
+
+SELECT 
+    date_trunc('day', backend_start) AS connection_date,
+    datname AS database_name,
+    COUNT(*) AS active_connections
+FROM pg_stat_activity
+WHERE state = 'active'
+GROUP BY connection_date, datname
+ORDER BY connection_date DESC, active_connections DESC;
+
+
+ 
+ 
+SELECT 
+
+    date_trunc('day', backend_start) AS connection_date, 
+
+    count(*) AS total_connections
+
+FROM pg_stat_activity
+
+GROUP BY connection_date
+
+ORDER BY connection_date DESC;
+ 
+	
+
+=======================idle & active query check======================================================================
+SELECT
+ 
+    (SELECT count(*) FROM pg_stat_activity where state='idle') AS idle_connections,
+ 
+    (SELECT setting::int FROM pg_settings WHERE name = 'max_connections') AS max_connections;
+	
+
+SELECT
+ 
+    (SELECT count(*) FROM pg_stat_activity where state='active') AS active_connections,
+ 
+    (SELECT setting::int FROM pg_settings WHERE name = 'max_connections') AS max_connections;
+	
+SELECT
+ 
+    (SELECT count(*) FROM pg_stat_activity) AS total_connections,
+ 
+    (SELECT setting::int FROM pg_settings WHERE name = 'max_connections') AS max_connections;
+	
+
+
+*********************Terminat long run query********************************************************************************************************8
+1. SELECT pg_terminate_backend(8422);
+
+2. SELECT pg_terminate_backend(pid)
+FROM pg_stat_activity
+WHERE pid IN (1250948, 1241890, 1244956, 1223292, 1253835, 1245536);
+
+***********************************************Blocking Query ******************************************************************************************
+
+select pid, 
+       usename, 
+       pg_blocking_pids(pid) as blocked_by,
+       query as blocked_query
+from pg_stat_activity
+where cardinality(pg_blocking_pids(pid)) > 0;
+
+
+SELECT
+    activity.pid,
+    activity.usename,
+    activity.query,
+    blocking.pid AS blocking_id,
+    blocking.query AS blocking_query
+FROM pg_stat_activity AS activity
+JOIN pg_stat_activity AS blocking ON blocking.pid = ANY(pg_blocking_pids(activity.pid));
+
+	
+
+select waiting_event from pg_stat_activity where state='active';
+
+
+
+
+
+
+******************************** pg_base_backup ***********************************************************************************************
+pg_basebackup -D /var/lib/pgsql/15/data -h 192.168.29.193 -p 5432 -Xs -R -P > backup.log 2>&1
+
+pg_basebackup   -D /path/to/backup -h 192.168.29.193 -p 5432 -Xs -R -P > backup.log 2>&1
+
+pg_basebackup -h <server_ip> -U <replication_user> -D /backup_dir --progress --max-rate=10MB
+
+pg_basebackup -h <server_ip> -U <replication_user> -D /backup_dir --progress --checkpoint-timeout=300
+
+
+
+
+
+-D /var/lib/pgsql/15/data → Target data directory for restore.
+
+-h 192.168.29.193 → Source PostgreSQL server IP.
+
+-p 5432 → Port number.
+
+-Xs → Include WAL files in tar or plain format.
+
+-R → Automatically write standby.signal and primary_conninfo (for streaming replication).
+
+-P → Show progress.
+
+> backup.log 2>&1 → Logs all output (stdout + stderr) to backup.log.
+
+===========================================================================================================================
+if check_point is not happen :- 
+
+Step1:- primary side hit check_point twice:- 
+
+checkpoint;
+
+Step2:- use pg_basebackup command:- 
+
+pg_basebackup   -D /data/pgdata --checkpoint=fast -h 100.127.129.45 -p 5432 -Xs -R -P > backup.log 2>&1
+
+
+=================================pg_rewind=======================================================
+
+PGPASSWORD='B(!t$@12Pl45' /usr/lib/pgsql-15.3/bin/pg_rewind --target-pgdata=/application/postgresql-15/data --source-server="host=172.26.2.5 user=postgres" -P > rewind.log 2>&1
+
+
+
+================================================Pg_dump=======================================================================
+
+
+1. pg_dump -U username -h hostname -d database_name | gzip > backup_name.sql.gz
+
+2.pg_dump -U postgres -h localhost -d mydatabase -Fd -j 4 -Z 9 -f mydatabase_backup_dir -------------parllel cpu used
+
+3. pg_dump -U username -h hostname -d database_name -Fc -f backup_name.dump
+
+/usr/pgsql-15/bin/pg_basebackup -U postgres -p 5432 -D backup location  -P -Ft -R 
+
+
+4. pg_dump -U username -h hostname -d database_name | gzip > backup_name.sql.gz
+
+5. pg_dump -U postgres -h localhost -d mydatabase -Fd -j 4 -Z 9 -f mydatabase_backup_dir -------------parllel cpu used
+
+-j 4 Use 4 parallel jobs to speed up the dump (only valid with -Fd).
+-Z 9 Use maximum compression (level 9).
+
+
+6. pg_dump -U username -h hostname -d database_name -Fc -f backup_name.dump -------------------- custom format 
+
+7. pg_dump -U smile_mod -h 10.189.8.160 -p 54032 -d polc_claims_db --schema claims -v -x -O  -f /backup_25/calmis.sql
+
+-v :- Verbose mode — shows detailed progress output.
+-x :- Exclude privileges (GRANT/REVOKE) from the dump.
+-O :- Exclude ownership information (i.e., no OWNER TO ... lines).
+-Fc :- Dump in custom format, useful for selective restoration via pg_restore.
+
+
+8. 
+
+
+
+
+********************************************************************************************************************************************************
+
+Query the pg_stat_progress_basebackup View
+
+SELECT * FROM pg_stat_progress_basebackup;
+
+*********************************  replication in sync or not   **********************************************************************************
+
+SELECT pg_is_in_recovery();
+
+**************************************** long running query to see all database ***********************************************************
+
+select datname,pid,query,usesysid,usename,application_name,client_addr,state,query_start,now() - query_start AS duration from pg_stat_activity
+ WHERE  (now() - pg_stat_activity.query_start) >interval '1 minutes';
+ 
+ select datname,pid,query,usesysid,usename,application_name,client_addr,state,query_start,now() - query_start AS duration from pg_stat_activity 
+ WHERE query not like 'START_REPLICATION%' and  (now() - pg_stat_activity.query_start) >interval '15 minutes' and state like 'idle';
+ 
+ select datname,pid,query,usesysid,usename,application_name,client_addr,state,query_start,now() - query_start AS duration from pg_stat_activity 
+ WHERE query not like 'START_REPLICATION%' and  (now() - pg_stat_activity.query_start) >interval '15 minutes' and state not like 'idle' ;
+ 
+ 
+ SELECT datname, pid, usename, state, wait_event_type, wait_event, query,query_start FROM pg_stat_activity  WHERE wait_event_type = 'IO'  ORDER BY query_start ASC;
+
+ 
+ 
+ --------------------------------------------------------------dead tuple---------------------------------------------------------------------------
+
+select schemaname, relname, n_live_tup,n_dead_tup from pg_stat_user_tables where n_dead_tup >=1000 order by n_dead_tup desc limit(10);
+
+
+
+SELECT 'vacuum  dwh.' || tablename ||';' FROM pg_tables WHERE  schemaname IN ('public') and tablename in (select relname
+from pg_stat_all_tables where relname not like 'pg_%' and n_dead_tup >0);
+ 
+ 
+ table wise dead tuple:- 
+ 
+ SELECT relname AS table_name,
+       n_dead_tup AS dead_tuples
+FROM pg_stat_user_tables
+WHERE relname = 'max_mtr_view';
+ --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ To see lock query show in top command
+ 
+ SELECT
+    pg_stat_activity.pid,
+    pg_stat_activity.usename,
+    pg_stat_activity.application_name,
+    pg_stat_activity.query,
+    pg_locks.*
+FROM
+    pg_stat_activity
+    JOIN pg_locks ON pg_stat_activity.pid = pg_locks.pid
+WHERE
+    pg_locks.relation IS NOT NULL;
+
+
+
+SELECT
+    t.relname AS table_name,
+    l.locktype,
+    l.mode,
+    l.granted
+FROM
+    pg_catalog.pg_locks l
+JOIN
+    pg_catalog.pg_class t
+ON
+    l.relation = t.oid
+WHERE
+    t.relkind = 'r';
+	
+select t.relname,l.locktype,page,virtualtransaction,pid,mode,granted from pg_locks l, pg_stat_all_tables t where l.relation=t.relid and mode <> 'AccessShareLock' order by relation asc;	
+	
+	
+	
+SELECT * FROM pg_locks pl LEFT JOIN pg_stat_activity psa ON pl.pid = psa.pid;
+
+
+SELECT a.datname, c.relname, l.transactionid, l.mode, l.GRANTED, a.usename, a.query, a.query_start, age(now(), a.query_start) AS "age"
+FROM pg_stat_activity a
+JOIN pg_locks l ON l.pid = a.pid
+JOIN pg_class c ON c.oid = l.relation
+ORDER BY a.query_start;
+***************************************************************reload****************************************************************************
+SELECT * FROM pg_hba_file_rules ;
+select pg_reload_conf;
+
+***********************************************Ideal connection terminate***********************************************************************************
+
+SELECT pg_terminate_backend(pg_stat_activity.pid)  FROM pg_stat_activity WHERE state = 'idle';
+
+SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE datname = 'postgres' AND pid <> pg_backend_pid() AND state in ('idle');
+
+SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE state = 'idle';
+
+
+------------------------------------------
+
+---------------------------------------------------Temp size-----------------------------------------------------------------------------------------------
+WITH tablespaces AS (
+    SELECT
+        spcname AS tbl_name,
+        coalesce(nullif(pg_tablespace_location(oid), ''), (current_setting('data_directory') || '/base')) AS tbl_location
+    FROM pg_tablespace
+),
+tablespace_suffix AS (
+    SELECT
+        tbl_name,
+        tbl_location || '/pgsql_tmp' AS path
+    FROM tablespaces
+    WHERE tbl_name = 'pg_default'
+    UNION ALL
+    SELECT
+        tbl_name,
+        tbl_location || '/' || path || '/pgsql_tmp'
+    FROM tablespaces, LATERAL pg_ls_dir(tbl_location) AS path
+    WHERE path ~ ('PG_' || substring(current_setting('server_version') FROM '^(?:\d\.\d\d?|\d+)'))
+),
+stat AS (
+    SELECT
+        substring(file from '\d+\d') AS pid,
+        tbl_name AS temp_tablespace,
+        pg_size_pretty(sum(pg_size_bytes(size))) AS size
+    FROM tablespace_suffix, LATERAL pg_ls_dir(path, true, false) AS file,
+    LATERAL pg_size_pretty((pg_stat_file(path || '/' || file, true)).size) AS size
+    GROUP BY pid, temp_tablespace
+)
+SELECT
+    a.datname,
+    a.pid,
+    coalesce(size, '0 MB') AS temp_size_written,
+    coalesce(temp_tablespace, 'not using temp files') AS temp_tablespace,
+    a.application_name,
+    a.client_addr,
+    a.usename,
+    (clock_timestamp() - a.query_start)::interval(0) AS duration,
+    (clock_timestamp() - a.state_change)::interval(0) AS duration_since_state_change,
+    trim(trailing ';' FROM left(query, 1000)) AS query,
+    a.state,
+    a.wait_event_type || ':' || a.wait_event AS wait
+FROM pg_stat_activity AS a
+LEFT JOIN stat ON a.pid = stat.pid::int
+WHERE a.pid != pg_backend_pid()
+ORDER BY temp_size_written DESC;
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+how many file generate in server date wise:- 
+
+1.select date_trunc('hour',modification) date, count(*) No_of_WAL, trunc((sum(size)/(1024*1024*1024)),2) size_in_GB from pg_ls_waldir() group by date_trunc('hour',modification) order by date_trunc('hour',modification) asc;
+
+2.
+SELECT now() wal_capture_time,
+
+        wal_records,
+
+        wal_fpi,
+
+        wal_bytes,
+
+        wal_buffers_full,
+
+        wal_write,
+
+        wal_write_time,
+
+        wal_sync_time,
+
+        stats_reset
+
+FROM   pg_stat_wal;
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+index:- 
+
+to see index:- 
+
+1.table wise:- 
+
+SELECT schemaname, relname AS tablename, indexrelname AS indexname, idx_scan
+FROM pg_stat_all_indexes
+WHERE relname = 'your_table_name';
+
+SELECT 
+    indexname AS index_name,
+    indexdef AS index_definition
+FROM 
+    pg_indexes
+WHERE 
+    tablename = 'your_table_name';
+
+
+SELECT 
+    i.relname AS index_name,
+    ARRAY_AGG(a.attname) AS index_columns
+FROM 
+    pg_class t,
+    pg_class i,
+    pg_index ix,
+    pg_attribute a
+WHERE 
+    t.oid = ix.indrelid
+    AND i.oid = ix.indexrelid
+    AND a.attnum = ANY(ix.indkey)
+    AND a.attrelid = t.oid
+    AND t.relname = 'your_table_name'
+GROUP BY 
+    i.relname;
+
+
+
+
+2.schema wise;- 
+
+SELECT
+    indexrelname AS index_name,
+    pg_size_pretty(pg_relation_size(indexrelid)) AS index_size
+FROM
+    pg_stat_all_indexes
+WHERE
+    schemaname = 'public'; -- Change 'public' to the schema name if your indexes are in a different schema
+
+
+	
+3.index size:- 
+
+SELECT
+    indexrelname AS index_name,
+    pg_size_pretty(pg_relation_size(indexrelid)) AS index_size
+FROM
+    pg_stat_user_indexes
+WHERE
+    relname = 'your_table_name';
+	
+-----------------------------------------------------------------------------------------------------------------------------------------------
+
+Table wise reindex:-
+
+SELECT 'REINDEX INDEX ' || indexname || ';' AS reindex_command
+FROM pg_indexes
+WHERE schemaname IN ('plf') and tablename = 'table name';
+
+SELECT 'REINDEX INDEX ' || indexname || ';' AS reindex_command
+FROM pg_indexes
+WHERE tablename = 'communications' and schemaname IN ('digital_collections_varthana');
+
+schemawise:- 
+
+SELECT 'REINDEX index plf.' || indexname ||';' FROM pg_indexes WHERE schemaname IN ('plf');
+
+
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+To see all setting:- 
+
+SELECT name, setting
+FROM pg_settings
+WHERE name IN (
+    'max_connections',
+    'shared_buffers',
+    'effective_cache_size',
+    'maintenance_work_mem',
+    'checkpoint_completion_target',
+    'wal_buffers',
+    'default_statistics_target',
+    'random_page_cost',
+    'effective_io_concurrency',
+    'work_mem',
+    'huge_pages',
+    'min_wal_size',
+    'max_wal_size',
+    'max_worker_processes',
+    'max_parallel_workers_per_gather',
+    'max_parallel_workers',
+    'max_parallel_maintenance_workers'
+);
+
+Implement idle session timeout settings and automatic cleanup for sessions exceeding defined thresholds
+
+
+
+SELECT name AS parameter,
+       (context IN ('user', 'superuser', 'backend', 'sighup', 'postmaster')) AS can_be_changed,
+       (context = 'postmaster') AS change_requires_restart,
+       (context = 'sighup') AS can_be_changed_by_reload
+FROM pg_settings
+ORDER BY name;
+-------------------------------------------------------------------------------------------------------------------------------------------------
+
+To use which user have select & delete permission:-
+
+SELECT 
+    table_schema,
+    table_name,
+    MAX(CASE WHEN privilege_type = 'SELECT' THEN grantee END) AS select_role,
+    MAX(CASE WHEN privilege_type = 'INSERT' THEN grantee END) AS insert_role,
+    MAX(CASE WHEN privilege_type = 'UPDATE' THEN grantee END) AS update_role,
+    MAX(CASE WHEN privilege_type = 'DELETE' THEN grantee END) AS delete_role
+FROM 
+    information_schema.role_table_grants
+WHERE 
+    grantee = 'SantoshW'
+GROUP BY 
+    table_schema, table_name
+ORDER BY 
+    table_name;
+
+
+
+
+
+SELECT grantee, table_schema, table_name, privilege_type
+FROM information_schema.role_table_grants
+WHERE grantee = 'SantoshW';
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+wal applied :- 
+
+SELECT 
+    date_trunc('hour', modification) AS date,
+    COUNT(*) AS No_of_WAL,
+    TRUNC((SUM(size) / (1024 * 1024 * 1024)), 2) AS size_in_GB,
+    STRING_AGG(name, ', ') AS wal_files
+FROM 
+    pg_ls_waldir()
+WHERE 
+    modification::date = '2024-10-19'  -- Replace with your desired date
+GROUP BY 
+    date_trunc('hour', modification)
+ORDER BY 
+    date_trunc('hour', modification) ASC;
+ 
+ 
+ select date_trunc('hour',modification) date, count(*) No_of_WAL, trunc((sum(size)/(1024*1024*1024)),2) size_in_GB from pg_ls_waldir() group by date_trunc('hour',modification)
+order by date_trunc('hour',modification) asc;
+
+=======================================================================================================================
+wal generation speed:- 
+
+SELECT
+  pid,
+  usename,
+  application_name,
+  client_addr,
+  backend_start,
+  state,
+  sent_lsn,
+  write_lsn,
+  flush_lsn,
+  replay_lsn,
+  sync_priority,
+  sync_state,
+  (pg_wal_lsn_diff(sent_lsn, write_lsn)) / 1024 AS sent_diff_kb,
+  (pg_wal_lsn_diff(write_lsn, flush_lsn)) / 1024 AS flush_diff_kb,
+  (pg_wal_lsn_diff(flush_lsn, replay_lsn)) / 1024 AS replay_diff_kb,
+  (EXTRACT(EPOCH FROM now() - backend_start)) AS time_active_seconds
+FROM
+  pg_stat_replication;
+
+
+=========================================================================================================================
+wal generation speed:-
+
+SELECT
+    pid,
+    usename,
+    application_name,
+    client_addr,  -- Shows the IP address of the connected client
+    state,
+    sync_state,
+    replay_lsn,
+    sent_lsn AS received_lsn,  -- Use sent_lsn to represent the last received LSN
+    pg_current_wal_lsn() - sent_lsn AS wal_to_send,
+    pg_current_wal_lsn() - replay_lsn AS wal_replayed,
+    pg_current_wal_lsn() - pg_last_wal_receive_lsn() AS wal_sent  -- Amount of WAL sent
+FROM
+    pg_stat_replication;
+
+
+===================================================================
+
+Checking WAL Segment Generation via pg_stat_archiver
+
+SELECT pg_wal_lsn_diff('162F/A1BDADA0', '162F/670509C8') AS wal_diff;
+
+
+select round(985179096/pow(1024,3.0),2) missing_lsn_GiB;
+
+select pg_wal_lsn_diff('15DE/6E8715D0','15D7/C2C40000');
+
+==================================================================================================
+
+To see all user , expaire date & access:- 
+
+WITH expiry_info AS (
+  SELECT
+    rolname AS usename,
+    CASE
+      WHEN rolvaliduntil = 'infinity' THEN 'infinity'
+      ELSE to_char(
+             rolvaliduntil AT TIME ZONE 'UTC',
+             'YYYY-MM-DD HH24:MI:SSOF'
+           )
+    END AS "Expiry (UTC)"
+  FROM pg_roles
+)
+SELECT 
+    r.rolname AS usename,
+    ei."Expiry (UTC)",
+    ARRAY(
+      SELECT m2.rolname
+      FROM pg_auth_members am
+      JOIN pg_roles m2 ON am.roleid = m2.oid
+      WHERE am.member = r.oid
+    ) AS rolename,
+    CASE WHEN r.rolsuper THEN 'yes' ELSE 'no' END AS rolsuper,
+    CASE WHEN r.rolcreaterole THEN 'yes' ELSE 'no' END AS rolcreaterole,
+    CASE WHEN r.rolcreatedb THEN 'yes' ELSE 'no' END AS rolcreatedb,
+    CASE
+      WHEN r.rolvaliduntil = 'infinity' THEN 'infinity'
+      ELSE to_char(r.rolvaliduntil, 'YYYY-MM-DD HH24:MI:SS')
+    END AS "Expiry date (local)",
+    COALESCE(string_agg(n.nspname, ',' ORDER BY n.nspname), '') AS schema_access
+FROM pg_roles r
+LEFT JOIN pg_namespace n 
+  ON has_schema_privilege(r.rolname, n.nspname, 'USAGE')
+ AND n.nspname NOT IN ('pg_catalog', 'information_schema')
+ AND n.nspname NOT LIKE 'pg_temp_%'
+ AND n.nspname NOT LIKE 'pg_toast%'
+LEFT JOIN expiry_info ei 
+  ON ei.usename = r.rolname
+WHERE r.rolcanlogin = true
+GROUP BY 
+    r.rolname,
+    r.rolsuper,
+    r.rolcreaterole,
+    r.rolcreatedb,
+    r.rolvaliduntil,
+    r.oid,
+    ei."Expiry (UTC)"
+ORDER BY r.rolname;
+
+
+
+
+===============================================================================================================================================
+
+1.database size:-
+postgres=# \l+
+
+2.switch to another database:-
+postgres=# \c databasename
+
+3.list of database table:-
+postgres=# \dt+
+
+4.Describe table:-
+
+postgres=# \d tablename or  \d+
+
+5.list of all schema:-
+postgres=# \dn
+
+6.list of all user nad their role:-
+postgres=# \du+
+
+7. list of all function:-
+postgres=# \df+
+
+8.list of all views:-
+postgres=# \dv+
+
+9.save query result to file :-
+postgres=# \o <file_name>           ---------------------------  | start
+                                                                 | 
+postgres=# \o                        --------------------------- | stop
+
+10.quit psql:-
+postgres=# \q
+
+11.execute previous command:-
+postgres=# \g
+
+12. To see version of postgresql:- 
+postgres=# select version();
+
+13.getting help on postgresql command:-
+
+postgres=# \?  or \h
+
+14.How to turn on timing and checking ; how much time a query takes to excute:-
+postgres=# \timing------------------------start
+postgres=# \timing ---------------------------stop
+
+15.edit query:-
+postgres=# \e
+
+16. database oid number:-
+postgres=# select datname,oid from pg_database where datname = 'database_name';
+
+17.to schema and table:-
+postgres=# select schemaname,tablename from pg_tables;
+postgres=# \dt *.*
+
+18.add data in table using external file:-
+
+bash$ psql -U postgres -d database_name -f <file_name.sql>
+
+bash$ pg_restore -U postgres -d dvd /home/gaurav/dvdrental.tar
+
+19.currently working on schema:-
+
+postgres=#select current_schema();
+
+20.user:-
+
+postgres=#select current_user();
+
+21.current_database:-
+
+postgres=#select current_database();
+
+22.To see current setting in postgersql.conf file:-
+
+postgres=#select current_setting('setting name');
+
+example:- postgres=#select current_setting('shaered_buffers');
+
+23.when was last time your system has been rebooted:-
+
+postgres=#select pg_postmaster_start_time();
+
+24.current time and date:-
+
+postgres=#select now() as current;
+
+25.change database password :-
+
+postgres=# \password username
+
+26.To copy any query information in file:-\
+
+postgres#= \copy (select * form actory) To '/var/lib/pgsql/actor.csv' with (format csv,header);
+
+
+27 To see all user:-
+ 
+postgres#= \du
+
+28.to see all setting in postgresql.conf file:-
+
+postgres#= select * from pg_file_settings;
+
+29.create table stracture:- 
+
+postgres#= create table table_name( like actor);
+
+30. create tempora table:-
+ 
+postgres#= create table table_name as select * from table_name;
+
+
+
+31.Number of activy connection:-
+
+
+postgres#= SELECT
+           datname AS database_name,
+           numbackends AS active_connections,
+            max_connections AS max_connections,
+            (max_connections - numbackends) AS remaining_connections
+             FROM pg_stat_database;
+
+3846033 3853029
+
+
+32. history:- 
+
+/s
+
+----------------------------------------------------------------------------------------------------------
+
+
+CREATE TABLE large_test (num1 bigint, num2 double precision, num3 double precision);
+ 
+ 
+CREATE TABLE
+INSERT INTO large_test (num1, num2, num3)
+SELECT round(random()*10), random(), random()*142
+FROM generate_series(1, 20000000) s(i);
+
+
+=========================================================================================================================
+
+1. DB User Access Details with Privileges 
+SELECT 
+    grantee AS user_name, 
+    table_catalog, 
+    table_schema, 
+    table_name, 
+    privilege_type 
+FROM 
+    information_schema.role_table_grants 
+WHERE 
+    table_schema NOT IN ('pg_catalog', 'information_schema')  -- Exclude specific schemas
+ORDER BY 
+    grantee, table_name;
+
+	------------------------------------------------
+
+
+2. Number of WAL Files
+SELECT 
+    COUNT(*) AS wal_file_count 
+FROM 
+    pg_ls_dir('pg_wal') AS wal_files;
+
+	+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+3. Replication Lag in Bytes
+replication  below 10 version
+SELECT 
+    pg_current_xlog_location() AS current_lsn,
+    pg_last_xlog_replay_location() AS last_replay_lsn,
+    pg_xlog_location_diff(pg_current_xlog_location(), pg_last_xlog_replay_location()) AS replication_lag_bytes
+FROM 
+    pg_stat_replication;  -- Run this on the primary server
+___________
+SELECT      above 10 version
+    pid,
+    usename,
+    application_name,
+    client_addr,
+    state,
+    pg_current_wal_lsn() AS current_lsn,
+    replay_lsn,
+    pg_current_wal_lsn() - replay_lsn AS replication_lag_bytes
+FROM 
+    pg_stat_replication;
+
++++++++++++++++++++++++++++++++++++++++++++++++++++++	------------------------------------------------------------------
+
+
+4. Buffer Hit Ratio 
+SELECT 
+    (1 - (blks_read::float / (blks_read + blks_hit))) AS buffer_hit_ratio 
+FROM 
+    pg_stat_database;
+	______________________________________________________________________________________
+
+
+
+5. Fragmentation Details 
+SELECT 
+    n.nspname AS schema_name,
+    c.relname AS table_name,
+    pg_total_relation_size(c.oid) AS total_size,
+    pg_indexes_size(c.oid) AS indexes_size,
+    pg_relation_size(c.oid) AS table_size,
+    pg_total_relation_size(c.oid) - pg_relation_size(c.oid) - pg_indexes_size(c.oid) AS fragmentation
+FROM 
+    pg_class c
+JOIN 
+    pg_namespace n ON n.oid = c.relnamespace
+WHERE 
+    c.relkind = 'r'  -- Only regular tables
+    AND n.nspname NOT IN ('pg_catalog', 'information_schema')  -- Exclude pg_catalog and information_schema
+ORDER BY 
+    fragmentation DESC;
+
+	_______________________________________________________________________________
+
+
+6. Current Active Queries 
+SELECT 
+    pid, 
+    usename, 
+    query, 
+    state, 
+    query_start 
+FROM 
+    pg_stat_activity 
+WHERE 
+    state = 'active';
+	_____________________________________________________________________________
+
+
+7. Long Running Queries (5 minutes) 
+SELECT 
+    pid, 
+    usename, 
+    query, 
+    state, 
+    query_start 
+FROM 
+    pg_stat_activity 
+WHERE 
+    state = 'active' 
+    AND now() - query_start > interval '5 minutes';
+
+	__________________________________________________________________________
+
+
+8. To Find Deadlocks -----------
+Deadlocks cannot be queried directly, but you can check the log file or the pg_locks view for lock issues. Enable deadlock logging if not already done:
+
+
+SHOW log_statement;
+
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+9. Locking and Blocking Operations 
+
+SELECT d.datname,
+w.locktype AS hold_lock_type,
+ha.usename AS hold_user,
+h.pid AS holder_pid,
+h.mode AS hold_mode,
+w.locktype AS waiter_lock_type,
+coalesce(c.relname, 'Connect to DB') AS relation,
+substring(ha.query FROM 1 FOR 50) AS hold_sql,
+w.pid AS waiter_pid,
+w.mode AS wait_mode,
+CURRENT_TIMESTAMP - wa.query_start AS age,
+substring(wa.query FROM 1 FOR 50) AS wait_sql
+FROM pg_locks w
+LEFT OUTER JOIN pg_class c ON w.relation = c.oid
+JOIN pg_locks h ON (w.relation = h.relation OR w.virtualxid = h.virtualxid
+OR w.transactionid = h.transactionid)
+JOIN pg_stat_activity ha ON h.pid = ha.pid
+JOIN pg_stat_activity wa ON w.pid = wa.pid
+LEFT OUTER JOIN pg_database d ON h.database = d.oid
+WHERE w.granted = FALSE AND h.granted = TRUE
+ORDER BY 7,12;
+	_______________________________________________________________________________
+
+
+10. Database Size 
+
+SELECT 
+    datname AS database_name,
+    pg_size_pretty(pg_database_size(datname)) AS size,
+    pg_database_size(datname) / (1024^3) AS size_in_gb  -- Convert to GB
+FROM 
+    pg_database
+ORDER BY 
+    pg_database_size(datname) DESC;
+	________________________________________________________________________
+1
+
+1. Non-Index Big / Highest Tables 
+
+SELECT 
+    n.nspname AS schema_name,
+    c.relname AS table_name,
+    pg_total_relation_size(c.oid) AS total_size
+FROM 
+    pg_class c
+JOIN 
+    pg_namespace n ON n.oid = c.relnamespace
+WHERE 
+    c.relkind = 'r'  -- Only regular tables
+    AND n.nspname NOT IN ('pg_catalog', 'information_schema')  -- Exclude system schemas
+ORDER BY 
+    total_size DESC 
+LIMIT 10;  -- Change limit as needed
+
+______________________________________________________________
+
+
+
+12. Number of Concurrent Connections ---
+SELECT  COUNT(*) AS concurrent_connections FROM  pg_stat_activity;
+
+select usename,state,count(*) from pg_stat_activity group by usename,state order by 3 desc;
+___________________________________________________________
+
+WITH table_bloat AS (
+    SELECT
+        n.nspname AS schemaname,
+        c.relname AS tablename,
+        pg_total_relation_size(c.oid) AS total_size,
+        pg_relation_size(c.oid) AS table_size,
+        pg_total_relation_size(c.oid) - pg_relation_size(c.oid) AS bloat_size
+    FROM
+        pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE
+        c.relkind = 'r'
+        AND n.nspname IN ('cdb', 'dwh', 'fep')
+),
+schema_bloat AS (
+    SELECT
+        schemaname,
+        SUM(total_size) AS total_schema_size,
+        SUM(bloat_size) AS total_bloat_size
+    FROM
+        table_bloat
+    GROUP BY schemaname
+),
+vacuum_stats AS (
+    SELECT
+        schemaname,
+        MAX(last_vacuum) AS last_manual_vacuum,
+        MAX(last_autovacuum) AS last_auto_vacuum
+    FROM
+        pg_stat_user_tables
+    WHERE
+        schemaname IN ('cdb', 'dwh', 'fep')
+    GROUP BY schemaname
+)
+SELECT
+    sb.schemaname,
+    sb.total_schema_size,
+    sb.total_bloat_size,
+    ROUND((sb.total_bloat_size::numeric / sb.total_schema_size::numeric) * 100, 2) AS bloat_ratio,
+    vs.last_manual_vacuum,
+    vs.last_auto_vacuum
+FROM
+    schema_bloat sb
+    LEFT JOIN vacuum_stats vs ON sb.schemaname = vs.schemaname
+ORDER BY bloat_ratio DESC;

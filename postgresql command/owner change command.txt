@@ -1,0 +1,33 @@
+varthana:- db_varthana=arwd/postgres, sequence:-db_varthana=rwU/postgres 
+
+
+sundram:- table:- no permission is given , sequence:-db_sundaram=rwU/postgres
+
+lightfinance:- 
+schema:-digital_collections_lightfinance:- no permission,sequence:- db_lightfinance=rwU/postgres
+
+
+schema:- mcollect_lmf :-db_lightfinance=r/postgres,sequence;- db_lightfinance=rwU/postgres
+
+GRANT ALTER ON ALL TABLES IN SCHEMA digital_collections_varthana TO db_varthana;
+
+GRANT SELECT, INSERT, UPDATE, DELETE,ALTER  ON ALL TABLES IN SCHEMA public TO read_write ; 
+
+ db_lightfinance
+ db_sundaram    
+ db_varthana   
+
+Grant all privileges on all tables in schema digital_collections_varthana to db_varthana; 
+
+REVOKE DROP ON ALL TABLES IN SCHEMA digital_collections_sundaram FROM db_sundaram;
+
+
+Grant all privileges on all tables in schema mcollect_lmf to db_lightfinance; 
+
+ALTER DATABASE varthana  OWNER TO db_varthana;
+
+ALTER DATABASE your_database_name OWNER TO new_owner;
+
+ALTER SCHEMA  digital_collections_lightfinance OWNER TO digital_collections;
+
+ALTER TABLE digital_collections_varthana.url_tbl  OWNER TO db_varthana;

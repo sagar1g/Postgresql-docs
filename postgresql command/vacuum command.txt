@@ -1,0 +1,227 @@
+SELECT datname, pid, usename, state, query, query_start
+FROM pg_stat_activity
+WHERE state = 'active'
+  AND query ILIKE '%VACUUM%';
+
+=================================================================
+To see percentage vacuum done:- 
+
+SELECT pid,
+       relid::regclass AS table_name,
+       phase,
+       heap_blks_total,
+       heap_blks_scanned,
+       heap_blks_vacuumed,
+       index_vacuum_count,
+       max_dead_tuples,
+       num_dead_tuples,
+       ROUND((heap_blks_scanned::numeric / heap_blks_total) * 100, 2) AS scanned_percentage
+FROM pg_stat_progress_vacuum;
+
+
+SELECT 
+    pid,
+    relid::regclass AS table_name,
+    phase,
+    heap_blks_total,
+    heap_blks_scanned,
+    heap_blks_vacuumed,
+    index_vacuum_count,
+    max_dead_tuples,
+    num_dead_tuples,
+    ROUND((heap_blks_scanned::numeric / heap_blks_total) * 100, 2) AS scanned_percentage,
+    ROUND((heap_blks_vacuumed::numeric / heap_blks_total) * 100, 2) AS vacuumed_percentage
+FROM pg_stat_progress_vacuum WHERE pid = 409540;
+
+==========================
+analyze:- 
+
+ SELECT pid,
+       relid::regclass AS table_name,
+       phase,
+       sample_blks_total,
+       sample_blks_scanned,
+       ext_stats_total,
+       ext_stats_computed,
+       ROUND((sample_blks_scanned::numeric / NULLIF(sample_blks_total, 0)) * 100, 2) AS scanned_percentage
+FROM pg_stat_progress_analyze;
+ 
+
+================================================================================
+
+SELECT relname, last_vacuum, last_autovacuum, last_analyze, last_autoanalyze FROM pg_stat_all_tables WHERE schemaname = 'public';
+
+================================================================================================
+
+=====table view dead dead_tuples=============
+ 
+SELECT relname AS table_name,
+       n_dead_tup AS dead_tuples
+FROM pg_stat_user_tables
+WHERE relname = 'max_mtr_view';
+ 
+ 
+================dead tuples========================
+select relname, n_live_tup, n_dead_tup
+from pg_stat_all_tables where relname not like 'pg_%' and n_dead_tup > 0
+group by 1, 2, 3
+order by 2, 3 desc;
+ 
+==========================================================================
+select schemaname, relname, n_live_tup,n_dead_tup from pg_stat_user_tables where n_dead_tup >=1000 order by n_dead_tup desc limit(10);
+
+=============================================================================
+ 
+select relname,schemaname, n_live_tup, n_dead_tup,last_vacuum, last_autovacuum, last_analyze, last_autoanalyze
+FROM pg_stat_all_tables
+ORDER BY n_dead_tup DESC;
+ 
+--------------Dead tuples with tables size-----
+ 
+SELECT relname AS table_name,
+       n_dead_tup AS dead_tuples,
+       pg_size_pretty(pg_relation_size(relid)) AS table_size
+FROM pg_stat_user_tables
+ORDER BY n_dead_tup DESC;
+==================================================================================
+
+last vacuum , last auto vaccum, bloat ratio:- 
+
+WITH table_bloat AS (
+    SELECT
+        n.nspname AS schemaname,
+        c.relname AS tablename,
+        pg_total_relation_size(c.oid) AS total_size,
+        pg_relation_size(c.oid) AS table_size,
+        pg_total_relation_size(c.oid) - pg_relation_size(c.oid) AS bloat_size
+    FROM
+        pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE
+        c.relkind = 'r'
+),
+schema_bloat AS (
+    SELECT
+        schemaname,
+        SUM(total_size) AS total_schema_size,
+        SUM(bloat_size) AS total_bloat_size
+    FROM
+        table_bloat
+    GROUP BY schemaname
+),
+vacuum_stats AS (
+    SELECT
+        schemaname,
+        MAX(last_vacuum) AS last_manual_vacuum,
+        MAX(last_autovacuum) AS last_auto_vacuum
+    FROM
+        pg_stat_user_tables
+    GROUP BY schemaname
+)
+SELECT
+    sb.schemaname,
+    sb.total_schema_size,
+    sb.total_bloat_size,
+    ROUND((sb.total_bloat_size::numeric / sb.total_schema_size::numeric) * 100, 2) AS bloat_ratio,
+    vs.last_manual_vacuum,
+    vs.last_auto_vacuum
+FROM
+    schema_bloat sb
+    LEFT JOIN vacuum_stats vs ON sb.schemaname = vs.schemaname
+ORDER BY bloat_ratio DESC;
+
+
+========================================================================================================================================================
+
+WITH table_bloat AS (
+    SELECT
+        n.nspname AS schemaname,
+        c.relname AS tablename,
+        pg_total_relation_size(c.oid) AS total_size,
+        pg_relation_size(c.oid) AS table_size,
+        pg_total_relation_size(c.oid) - pg_relation_size(c.oid) AS bloat_size
+    FROM
+        pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE
+        c.relkind = 'r'
+),
+schema_bloat AS (
+    SELECT
+        schemaname,
+        SUM(total_size) AS total_schema_size,
+        SUM(bloat_size) AS total_bloat_size
+    FROM
+        table_bloat
+    GROUP BY schemaname
+),
+vacuum_stats AS (
+    SELECT
+        schemaname,
+        MAX(last_vacuum) AS last_manual_vacuum,
+        MAX(last_autovacuum) AS last_auto_vacuum
+    FROM
+        pg_stat_user_tables
+    GROUP BY schemaname
+)
+SELECT
+    sb.schemaname,
+    sb.total_schema_size,
+    sb.total_bloat_size,
+    ROUND((sb.total_bloat_size::numeric / sb.total_schema_size::numeric) * 100, 2) AS bloat_ratio,
+    vs.last_manual_vacuum,
+    vs.last_auto_vacuum
+FROM
+    schema_bloat sb
+    LEFT JOIN vacuum_stats vs ON sb.schemaname = vs.schemaname
+ORDER BY bloat_ratio DESC;
+
+
+===========================================================================================
+
+
+WITH table_bloat AS (
+    SELECT
+        n.nspname AS schemaname,
+        c.relname AS tablename,
+        pg_total_relation_size(c.oid) AS total_size,
+        pg_relation_size(c.oid) AS table_size,
+        pg_total_relation_size(c.oid) - pg_relation_size(c.oid) AS bloat_size
+    FROM
+        pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE
+        c.relkind = 'r'
+        AND n.nspname IN ('cdb', 'dwh', 'fep','partition_sub')
+),
+schema_bloat AS (
+    SELECT
+        schemaname,
+        SUM(total_size) AS total_schema_size,
+        SUM(bloat_size) AS total_bloat_size
+    FROM
+        table_bloat
+    GROUP BY schemaname
+),
+vacuum_stats AS (
+    SELECT
+        schemaname,
+        MAX(last_vacuum) AS last_manual_vacuum,
+        MAX(last_autovacuum) AS last_auto_vacuum
+    FROM
+        pg_stat_user_tables
+    WHERE
+        schemaname IN ('cdb', 'dwh', 'fep','partition_sub')
+    GROUP BY schemaname
+)
+SELECT
+    sb.schemaname,
+    sb.total_schema_size,
+    sb.total_bloat_size,
+    ROUND((sb.total_bloat_size::numeric / sb.total_schema_size::numeric) * 100, 2) AS bloat_ratio,
+    vs.last_manual_vacuum,
+    vs.last_auto_vacuum
+FROM
+    schema_bloat sb
+    LEFT JOIN vacuum_stats vs ON sb.schemaname = vs.schemaname
+ORDER BY bloat_ratio DESC;

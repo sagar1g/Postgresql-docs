@@ -1,0 +1,23 @@
+command:-
+sync; echo 3 > /proc/sys/vm/drop_caches      :-   cache free
+
+command:-(sendmail)
+wget  https://storage.googleapis.com/avdhesh/check_mk_copy.tar.gz
+
+command:-(check_mk)
+wget  https://storage.googleapis.com/avdhesh/check_mk_copy.tar.gz
+
+command:-
+
+
+ALTER SEQUENCE digital_collections_varthana.dashboard_user_details_id_seq OWNER to db_varthana;
+
+
+schemaname    
+sequencename  
+sequenceowner 
+
+
+select schemaname,sequencename,sequenceowner from pg_sequences;
+
+select 'Alter SEQUENCE '||t.schemaname||'.'||t.sequencename ||' owner to db_lightfinance ;' from pg_sequences t where schemaname='mcollect_lmf';

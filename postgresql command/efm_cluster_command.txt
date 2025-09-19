@@ -1,0 +1,42 @@
+# efm cluster :-
+
+1. systemctl status edb-efm-4.6.service
+
+2. status:- 
+efm cluster-status efm
+
+3. pg_rewind:- 
+
+efm_reconfigure_node.sh
+
+3. switchover command:- 
+
+/usr/edb/efm-4.6/bin/efm promote efm -switchover
+
+=============================================================================================================================================================================================
+
+To switch over:- 
+
+1.Verify streaming replication at primary database:-
+
+SELECT * FROM pg_stat_replication;
+
+2.Verify EFM cluster status using the below command. Ensure that EFM is showing no lag at the standby database and is safe to promote.
+
+/usr/edb/efm-4.6/bin/efm cluster-status efm
+
+3. Execute the following command to perform switchover
+
+/usr/edb/efm-4.6/bin/efm promote efm -switchover
+
+The above command will promote standby as the primary database, and the old primary will become a standby. Also, VIP will be automatically transferred from the old primary and to the newly promoted database.
+
+4.We can verify the cluster status using the below command:-
+
+/usr/edb/efm-4.6/bin/efm cluster-status efm
+
+5. If you want to switch back to the old primary server (current standby), steps 1 to 4 would help you switch back
+
+
+
+

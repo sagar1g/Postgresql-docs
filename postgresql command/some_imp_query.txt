@@ -1,0 +1,57 @@
+1.  buffer remove:- 
+sync; echo 3 > /proc/sys/vm/drop_caches
+----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+2. To see deatiles in hba.conf file:- 
+SELECT * FROM pg_hba_file_rules;
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+3.postgresql.conf file:- 
+      SHOW all;
+          (OR)
+    SELECT name, setting FROM pg_settings WHERE name ILIKE '%allow%';
+          (OR)
+     select * from pg_file_settings;
+	 
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+4.Show locks held by active transactions:
+SELECT pid, usename, locktype, mode, granted, query FROM pg_locks JOIN pg_stat_activity USING (pid) WHERE NOT granted;
+
+-------------------------------------------------------------------------------------------------------------------------------------------
+
+5.Show the query execution time statistics:
+SELECT query, calls, total_time, rows FROM pg_stat_statements ORDER BY total_time DESC LIMIT 10;
+------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+6.long run query:- 
+select pid,user,pg_stat_activity.query_start,
+now()-pg_stat_activity.query_start as query_time,query,state,wait_event_type,
+wait_event from pg_stat_activity where (now()-pg_stat_activity.query_start)>interval '5 minutes';
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+7.show replication status:-
+
+SELECT * FROM pg_stat_replication;
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+8.Show the current active queries:
+
+SELECT pid, query, state FROM pg_stat_activity WHERE state = 'active';
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+
+9.Show the database locks:
+
+SELECT relation::regclass, transactionid, mode, granted FROM pg_locks WHERE database IS NOT NULL;
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+ db_loksuvidha 
+ digital_collections

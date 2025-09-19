@@ -1,0 +1,26 @@
+#postgresql startup time and uptime:- 
+
+1.Uptime serevr:- 
+postgres# SELECT now() - pg_postmaster_start_time()  as postgres_uptime;
+
+2. startup time :- 
+
+postgres# SELECT pg_postmaster_start_time() as postgres_startup_time;
+
+3.replication lag:- 
+
+select now() -pg_last_xact_replay_timestamp() as replication_lag;
+______________________________________________________________________________
+
+
+#standby database:- 
+verify database status:- 
+
+select pg_stat_wal_receiver;
+---------------------------------------------------------------------------
+
+windows:- 
+reboot time:- 
+cmd:- 
+systeminfo | find /i "boot time"
+

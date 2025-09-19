@@ -1,0 +1,74 @@
+### PostgreSQL Blocking and Locking Commands
+ 
+#### Check for Blocking Processes:
+-- This query identifies blocking queries in PostgreSQL.
+SELECT blocked_locks.pid AS blocked_pid, blocked_activity.usename AS blocked_user, 
+       blocking_locks.pid AS blocking_pid, blocking_activity.usename AS blocking_user, 
+       blocked_activity.query AS blocked_query, blocking_activity.query AS blocking_query, 
+       blocked_activity.state AS blocked_state, blocking_activity.state AS blocking_state
+FROM pg_catalog.pg_stat_activity blocked_activity
+JOIN pg_catalog.pg_locks blocked_locks ON blocked_locks.pid = blocked_activity.pid
+JOIN pg_catalog.pg_locks blocking_locks ON blocking_locks.locktype = blocked_locks.locktype 
+    AND blocking_locks.database = blocked_locks.database 
+    AND blocking_locks.relation = blocked_locks.relation 
+    AND blocking_locks.page = blocked_locks.page 
+    AND blocking_locks.tuple = blocked_locks.tuple 
+    AND blocking_locks.virtualxid = blocked_locks.virtualxid 
+    AND blocking_locks.transactionid = blocked_locks.transactionid 
+    AND blocking_locks.pid != blocked_locks.pid
+JOIN pg_catalog.pg_stat_activity blocking_activity ON blocking_activity.pid = blocking_locks.pid
+WHERE blocked_activity.state = 'active' AND blocking_activity.state = 'active';
+ 
+#### Terminate Blocking Session:
+-- This command kills a blocking session by its PID.
+SELECT pg_terminate_backend(blocking_pid)
+FROM pg_stat_activity
+WHERE pid = (SELECT blocking_locks.pid
+             FROM pg_stat_activity blocked_activity
+             JOIN pg_locks blocked_locks ON blocked_locks.pid = blocked_activity.pid
+             JOIN pg_locks blocking_locks ON blocking_locks.locktype = blocked_locks.locktype
+             AND blocking_locks.database = blocked_locks.database
+             AND blocking_locks.relation = blocked_locks.relation
+             AND blocking_locks.page = blocked_locks.page
+             AND blocking_locks.tuple = blocked_locks.tuple
+             AND blocking_locks.virtualxid = blocked_locks.virtualxid
+             AND blocking_locks.transactionid = blocked_locks.transactionid
+             WHERE blocked_activity.state = 'active' AND blocking_locks.pid != blocked_locks.pid
+             LIMIT 1);
+ 
+#### Locking a Table (Exclusive Lock):
+-- This will lock the table for the current session, preventing others from accessing it.
+BEGIN;
+LOCK TABLE table_name IN EXCLUSIVE MODE;
+ 
+-- After the operation is completed, the transaction can be committed or rolled back.
+COMMIT;
+ 
+#### Locking a Table (Share Lock):
+-- This will lock the table so that other transactions can read but not modify the table.
+BEGIN;
+LOCK TABLE table_name IN SHARE MODE;
+ 
+-- After the operation is completed, the transaction can be committed or rolled back.
+COMMIT;
+ 
+#### Check for Lock Waits:
+-- Check if there are any queries waiting for locks.
+SELECT pid, usename, state, query
+FROM pg_stat_activity
+WHERE waiting = 't';
+ 
+#### List Locks Held by Current Session:
+SELECT pid, relation::regclass, mode, granted 
+FROM pg_locks 
+JOIN pg_stat_activity ON pg_locks.pid = pg_stat_activity.pid
+WHERE pg_stat_activity.pid = pg_backend_pid();
+ 
+#### Check for Deadlocks:
+-- This will check for deadlocks in the system.
+SELECT * FROM pg_stat_activity WHERE state = 'idle in transaction';
+ 
+-- Optionally, you can force termination of a deadlocked process:
+SELECT pg_terminate_backend(pid)
+FROM pg_stat_activity
+WHERE state = 'idle in transaction' AND pid != pg_backend_pid();

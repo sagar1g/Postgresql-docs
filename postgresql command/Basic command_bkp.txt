@@ -1,0 +1,143 @@
+**to see systemctl command avialble on enivronment-
+sudo systemctl list-units --type=service --all | grep postgresql
+
+
+****send email:-***************************************************************************************************************************
+
+[7/6 4:18 PM] Akshay Kank
+
+wget https://storage.googleapis.com/avdhesh/sendEmail
+
+***************To see active connection count***********************************************************************************************8
+SELECT count(*) FROM pg_stat_activity;
+
+
+
+*********************Terminat long run query********************************************************************************************************8
+SELECT pg_terminate_backend(850460);
+
+********************************pg_base_backup***********************************************************************************************
+pg_basebackup -D /var/lib/pgsql/15/data -h 192.168.29.193 -p 5432 -Xs -R -P
+
+*********************************replication in sync or not**********************************************************************************
+SELECT pg_is_in_recovery();
+
+****************************************long running query to see all database***********************************************************
+
+select datname,pid,query,usesysid,usename,application_name,client_addr,state,query_start,now() - query_start AS duration from pg_stat_activity
+ WHERE  (now() - pg_stat_activity.query_start) >interval '5 seconds';
+----------------------------------------------------------------------------------------------------------------------------------------------
+
+1.database size:-
+postgres=#\l+
+
+2.switch to another database:-
+postgres=#\c databasename
+
+3.list of database table:-
+postgres=#\dt+
+
+4.Describe table:-
+
+postgres=#\d tablename or  \d+
+
+5.list of all schema:-
+postgres=# \dn
+
+6.list of all user nad their role:-
+postgres=#\du+
+
+7. list of all function:-
+postgres=#\df+
+
+8.list of all views:-
+postgres=#\dv+
+
+9.save query result to file :-
+postgres=# \o <file_name>   ------------start
+
+postgres=#\o               --------------------------stop
+
+10.quit psql:-
+postgres=#\q
+
+11.execute previous command:-
+postgres=#\g
+
+12. To see version of postgresql:- 
+postgres=#select version();
+
+13.getting help on postgresql command:-
+
+postgres=#\?  or \h
+
+14.How to turn on timing and checking ; how much time a query takes to excute:-
+postgres=#\timing------------------------start
+postgres=#\timing ---------------------------stop
+
+15.edit query:-
+postgres=#\e
+
+16. database oid number:-
+postgres=#select datname,oid from pg_database where datname = 'database_name';
+
+17.to schema and table:-
+postgres=#select schemaname,tablename from pg_tables;
+postgres=#\dt *.*
+
+18.add data in table using external file:-
+
+bash$ psql -U postgres -d database_name -f <file_name.sql>
+
+bash$pg_restore -U postgres -d dvd /home/gaurav/dvdrental.tar
+
+19.currently working on schema:-
+postgres=#select current_schema();
+
+20.user:-
+postgres=#select current_user();
+
+21.current_database:-
+postgres=#select current_database();
+
+22.To see current setting in postgersql.conf file:-
+postgres=#select current_setting('setting name');
+example:- postgres=#select current_setting('shaered_buffers');
+
+23.when was last time your system has been rebooted:-
+
+postgres=#select pg_postmaster_start_time();
+
+24.current time and date:-
+postgres=#select now() as current;
+
+25.change database password :-
+postgres=# \password username
+
+26.To copy any query information in file:-\
+postgres#= \copy (select * form actory) To '/var/lib/pgsql/actor.csv' with (format csv,header);
+
+
+27 To see all user:- 
+postgres#= \du
+
+28.to see all setting in postgresql.conf file:-
+
+postgres#= select * from pg_file_settings;
+
+29.create table stracture:- 
+create table table_name( like actor);
+
+30. create tempora table:- 
+create table table_name as select * from table_name;
+
+
+
+31.Number of activy connection:- 
+SELECT
+    datname AS database_name,
+    numbackends AS active_connections,
+    max_connections AS max_connections,
+    (max_connections - numbackends) AS remaining_connections
+FROM pg_stat_database;
+

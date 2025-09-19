@@ -1,0 +1,30 @@
+*******************To see indexing assigned to table*******************************
+SELECT schemaname, tablename, indexname, indexdef
+FROM pg_indexes
+WHERE schemaname = 'public';
+
+These queries will show you the index name and the corresponding index definition for the specified table or schema.
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Check Query Execution Plans:-
+EXPLAIN SELECT * FROM your_table_name WHERE some_column = 'some_value';
+
+If you see terms like "Index Scan" or "Index Only Scan" in the execution plan, it indicates that an index is being used for that query.
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Monitoring Tools:
+
+Consider using monitoring tools and frameworks like PgBadger, pg_stat_statements, or PostgreSQL's built-in statistics views to monitor 
+the usage of indexes and overall query performance.
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Missing indes:-
+
+SELECT schemaname, tablename, reltuples, seq_scan, seq_tup_read, idx_scan, idx_tup_fetch
+FROM pg_stat_user_tables
+WHERE seq_scan > 0
+AND idx_scan = 0
+AND reltuples > 0;

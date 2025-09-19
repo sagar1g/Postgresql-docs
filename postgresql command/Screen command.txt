@@ -1,0 +1,10 @@
+1.screen -S backup
+
+2.ctr+ad :- normal window(exist screen window)
+
+3.list of all active screen session:-
+
+screen -ls
+
+4.Reattaches screen session:-
+screen -r <session_id>

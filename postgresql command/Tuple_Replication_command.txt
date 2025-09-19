@@ -1,0 +1,41 @@
+1.To see dead tuple,live tuple and dead tuple precentage
+ans:- 
+select schemaname,
+relname,
+pg_size_pretty(pg_relation_size(schemaname|| '.' || relname)) as size,
+n_live_tup,
+n_dead_tup,
+CASE 
+WHEN n_live_tup > 0 THEN (round((n_dead_tup::float / 
+n_live_tup::float)::numeric, 4)) * 100 END AS dead_tup_ratio,
+last_autovacuum,
+last_autoanalyze
+from pg_stat_user_tables
+order by dead_tup_ratio desc NULLS LAST;
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+2.Remove forigen constriant
+ALTER TABLE table_name DROP CONSTRAINT constraint_name;
+
+ALTER TABLE orders DROP CONSTRAINT fk_customer_id;
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+3.Top 10 Consuming Query:- 
+SELECT round((100 * total_time / sum(total_time)
+OVER ())::numeric, 2) percent,
+round(total_time::numeric, 2) AS total,
+calls,
+round(mean_time::numeric, 2) AS mean,
+substring(query, 1, 40)
+FROM pg_stat_statements
+ORDER BY total_time
+DESC LIMIT 10;
+---------------------------------------------------------------------------------------------------------------------------
+4.see live tuple and dead tuple:-
+
+SELECT schemaname, relname, n_live_tup, n_dead_tup
+FROM pg_stat_user_tables;
+------------------------------------------------------------------------------------------------------------------------
+5.replication lag:-
+select now() - pg_last_xact_replay_timestamp() AS replication_delay;
+-------------------------------------------------------------------------------------------------------------------------
+6.

@@ -1,0 +1,100 @@
+
+wal applied :- 
+
+SELECT 
+    date_trunc('hour', modification) AS date,
+    COUNT(*) AS No_of_WAL,
+    TRUNC((SUM(size) / (1024 * 1024 * 1024)), 2) AS size_in_GB,
+    STRING_AGG(name, ', ') AS wal_files
+FROM 
+    pg_ls_waldir()
+WHERE 
+    modification::date = '2024-10-19'  -- Replace with your desired date
+GROUP BY 
+    date_trunc('hour', modification)
+ORDER BY 
+    date_trunc('hour', modification) ASC;
+ 
+ 
+ select date_trunc('hour',modification) date, count(*) No_of_WAL, trunc((sum(size)/(1024*1024*1024)),2) size_in_GB from pg_ls_waldir() group by date_trunc('hour',modification)
+order by date_trunc('hour',modification) asc;
+
+=======================================================================================================================
+wal generation speed:- 
+
+SELECT
+  pid,
+  usename,
+  application_name,
+  client_addr,
+  backend_start,
+  state,
+  sent_lsn,
+  write_lsn,
+  flush_lsn,
+  replay_lsn,
+  sync_priority,
+  sync_state,
+  (pg_wal_lsn_diff(sent_lsn, write_lsn)) / 1024 AS sent_diff_kb,
+  (pg_wal_lsn_diff(write_lsn, flush_lsn)) / 1024 AS flush_diff_kb,
+  (pg_wal_lsn_diff(flush_lsn, replay_lsn)) / 1024 AS replay_diff_kb,
+  (EXTRACT(EPOCH FROM now() - backend_start)) AS time_active_seconds
+FROM
+  pg_stat_replication;
+
+
+=========================================================================================================================
+wal generation speed:-
+
+SELECT
+    pid,
+    usename,
+    application_name,
+    client_addr,  -- Shows the IP address of the connected client
+    state,
+    sync_state,
+    replay_lsn,
+    sent_lsn AS received_lsn,  -- Use sent_lsn to represent the last received LSN
+    pg_current_wal_lsn() - sent_lsn AS wal_to_send,
+    pg_current_wal_lsn() - replay_lsn AS wal_replayed,
+    pg_current_wal_lsn() - pg_last_wal_receive_lsn() AS wal_sent  -- Amount of WAL sent
+FROM
+    pg_stat_replication;
+
+
+===================================================================
+
+Checking WAL Segment Generation via pg_stat_archiver
+
+SELECT pg_wal_lsn_diff('162F/A1BDADA0', '162F/670509C8') AS wal_diff;
+
+
+select round(985179096/pow(1024,3.0),2) missing_lsn_GiB;
+
+select pg_wal_lsn_diff('15DE/6E8715D0','15D7/C2C40000');
+
+====================================================================================================
+how many file generate in server date wise:- 
+
+1.select date_trunc('hour',modification) date, count(*) No_of_WAL, trunc((sum(size)/(1024*1024*1024)),2) size_in_GB from pg_ls_waldir() group by date_trunc('hour',modification) order by date_trunc('hour',modification) asc;
+
+2.
+SELECT now() wal_capture_time,
+
+        wal_records,
+
+        wal_fpi,
+
+        wal_bytes,
+
+        wal_buffers_full,
+
+        wal_write,
+
+        wal_write_time,
+
+        wal_sync_time,
+
+        stats_reset
+
+FROM   pg_stat_wal;

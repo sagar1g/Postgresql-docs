@@ -1,0 +1,84 @@
+Replication check:- 
+
+1.SELECT
+  pg_is_in_recovery() AS is_slave,
+  pg_last_wal_receive_lsn() AS receive,
+  pg_last_wal_replay_lsn() AS replay,
+  pg_last_wal_receive_lsn() = pg_last_wal_replay_lsn() AS synced,
+  (
+   EXTRACT(EPOCH FROM now()) -
+   EXTRACT(EPOCH FROM pg_last_xact_replay_timestamp())
+  )::int AS lag;
+  
+  
+=========================================
+wal growth day wise:-
+
+SELECT to_char(modification, 'YYYY-MM-DD') AS wal_date, 
+       count(*) AS wal_count, 
+       pg_size_pretty(SUM(size)) AS total_wal_size
+FROM pg_ls_waldir()
+GROUP BY wal_date
+ORDER BY wal_date DESC;
+
+=========================================================
+  
+  
+wal file details:-   
+SELECT now() wal_capture_time,
+        wal_records,
+        wal_fpi,
+        wal_bytes,
+        wal_buffers_full,
+        wal_write,
+        wal_write_time,
+        wal_sync_time,
+        stats_reset
+FROM   pg_stat_wal;
+
+Query to Check WAL Reading and Replay Frequency on Standby:
+
+SELECT
+    pg_last_wal_receive_lsn() AS last_wal_received,
+    pg_last_wal_replay_lsn() AS last_wal_replayed,
+    pg_last_xact_replay_timestamp() AS last_replay_time,
+    now() - pg_last_xact_replay_timestamp() AS replication_delay,
+    CASE
+        WHEN pg_last_wal_receive_lsn() = pg_last_wal_replay_lsn() THEN 'In sync'
+        ELSE 'Lagging'
+    END AS status,
+    now() AS current_time
+\watch 1;
+
+------------------------------------------------
+to see how much wal file generate:- 
+
+select date_trunc('hour',modification) date, count(*) No_of_WAL, trunc((sum(size)/(1024*1024*1024)),2) size_in_GB from pg_ls_waldir() group by date_trunc('hour',modification) 
+order by date_trunc('hour',modification) asc;
+
+
+select pg_size_pretty(pg_wal_lsn_diff ('28/F0F29A10', '27/98837250')) as wal_generated
+----------------------------------------------------------
+select pg_wal_replay_resume():- it is used to resume WAL (Write-Ahead Logging) replay after it has been paused, typically in the context of replication.
+
+select pg_wal_replay_pause():- it is used to pause WAL (Write-Ahead Logging) replay after it has been paused, typically in the context of replication.
+
+
+----------------------------------------------------------------- 
+SELECT
+   CASE
+     WHEN pg_is_in_recovery()
+     THEN now() - pg_last_xact_replay_timestamp()
+     ELSE NULL
+   END AS replication_lag;  
+
+2. select pg_is_in_recovery(),pg_is_wal_replay_paused(), pg_last_wal_receive_lsn(), pg_last_wal_replay_lsn(), pg_last_xact_replay_timestamp();
+
+3.SELECT EXTRACT(EPOCH FROM now() - pg_last_xact_replay_timestamp())/60 AS replication_lag_minutes; --------------------(lag convert into minutes)
+
+4. select now() -pg_last_xact_replay_timestamp() as replication_lag;   ----------------(lag)
+  
+pg_is_in_recovery(): (boolean) True if recovery is still in progress.
+pg_last_wal_receive_lsn()/pg_last_xlog_receive_location():  (pg_lsn) The write-ahead log location received and synced to disk by streaming replication.
+pg_last_wal_replay_lsn()/pg_last_xlog_replay_location():  (pg_lsn) The last write-ahead log location replayed during recovery. If recovery is still in progress this will increase monotonically.
+pg_last_xact_replay_timestamp():  (timestamp with time zone) Get timestamp of last transaction replayed during recovery.
