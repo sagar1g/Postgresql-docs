@@ -1,0 +1,37 @@
+How to Calculate PostgreSQL Max Connections Based on CPU, Memory, and Other Factors 🧮🔍
+
+Configuring the right value for max_connections in PostgreSQL is crucial for performance. Setting it too high wastes resources, while setting it too low limits concurrency. Here’s how to calculate the optimal max_connections based on CPU, memory, and workload.
+
+1️⃣ Formula to Calculate max_connectionsA general formula based on available memory:
+
+max_connections = (Total Available Memory for Connections) / (Memory Per Connection)
+
+Where:
+
+Total Available Memory for Connections = Total RAM - (OS Memory + PostgreSQL Shared Buffers + Other Background Processes)
+
+Memory Per Connection = work_mem + temp_buffers + overhead
+
+2️⃣ Consider Key System Resources
+
+🖥️ CPU Cores:
+
+Each active connection consumes CPU cycles.
+
+A higher number of CPU cores allows for higher concurrency.
+
+General best practice:
+
+Single-core systems: Keep max_connections < 100
+
+4+ core systems: Can handle max_connections 200-500
+
+High-end DB servers: Use connection pooling (PgBouncer)
+
+💲 RAM (Memory Calculation Example):Assume Total RAM = 16GBOS & Background services consume ~4GBPostgreSQL Shared Buffers (25% of RAM) = 4GBWork Memory Per Connection (work_mem) = 4MB
+
+max_connections = (16GB - (4GB + 4GB)) / 4MB = 8GB / 4MB = 2000
+
+💡 However, allowing 2000 connections is unrealistic!Use connection pooling (PgBouncer) to efficiently manage connections and reduce overhead.
+
+By balancing these factors, you can fine-tune max_connections to match your system’s capabilities and workload needs, ensuring optimal performance without overloading resources.

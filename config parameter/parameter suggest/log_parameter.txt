@@ -1,0 +1,56 @@
+log_destination = 'stderr'       
+logging_collector = on              
+
+log_directory = 'log'               
+                                    
+log_filename = 'postgresql-%a.log'  
+
+  
+log_rotation_age = 1d               
+                                    
+log_rotation_size = 0               
+log_truncate_on_rotation = on       
+log_line_prefix = '%m [%p] '
+
+----------------------------------------------------------------------------------------------------------------------------------------
+
+
+log_destination = 'stderr'
+logging_collector = on
+log_directory = 'log'
+log_filename = 'postgresql-%a.log'
+log_rotation_age = 7d 
+log_line_prefix = '[%m]%u@%h->%d:%a [%p] ' # special values:
+log_connections = on
+log_disconnections = on
+log_duration = on
+log_hostname = on
+
+log_timezone = 
+
+timezone = Asia/Kolkata 
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+-----------------For slow quries  this parameter helpful ---------------------------------------------------------------------------------------
+
+log_min_duration_statement = 5000:-
+
+Setting log_min_duration_statement to 5000 means that PostgreSQL will log statements that take longer than 5000 milliseconds (5 seconds) to execute. 
+This parameter is part of PostgreSQL's logging configuration and is useful for performance tuning and identifying slow queries. 
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+log_statement:-
+
+This parameter determines which SQL statements are logged.
+
+none: Disables logging of all statements.
+ddl: Logs only DDL statements (CREATE, ALTER, DROP, etc.).
+mod: Logs DDL and DML statements (all data definition and manipulation statements).
+all: Logs all statements, including both DDL and DML.
+dml: Logs only DML statements (INSERT, UPDATE, DELETE, SELECT INTO).
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+log_lock_waits: If set to 'on', PostgreSQL logs the PID (Process ID) of the blocked process and the PID of the blocking process for each lock wait. 
+It's useful for diagnosing and resolving lock contention issues.

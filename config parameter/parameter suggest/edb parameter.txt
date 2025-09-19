@@ -1,0 +1,101 @@
+Connection and Authentication
+
+listen_addresses = '*'
+
+password_encryption = 'scram-sha-256'
+
+# Resource Consumption
+
+max_connections        ​= 100​​# GREATEST(3 x CPU cores, 100)
+
+shared_buffers         ​= 2GB​​# 25% of RAM up to 10GB
+
+maintenance_work_mem   ​= 100MB​​
+
+work_mem               ​= 64MB
+
+bgwriter_lru_maxpages  ​= 1000
+
+# Write Ahead Log
+
+wal_buffers            ​= 64MB
+
+wal_compression               = on
+
+wal_log_hints​​​= on​​# required for pg_rewind
+
+max_wal_size​​​= 1GB​​# 1%  available WAL disk space
+
+archive_mode                  = on
+
+archive_command               = ': to be configured'
+
+checkpoint_timeout     ​= 15min
+
+checkpoint_completion_target  = 0.9
+
+# Replication
+
+wal_keep_segments             = 64            ​
+
+wal_keep_size                 = 1GB         
+
+promote_trigger_file          = '/tmp/primarygone'
+
+restore_command               = ': to be configured'
+
+#primary_slot_name            = ''
+
+# Query Planning
+
+effective_cache_size   ​= 6GB​​# 75% of RAM or shared_buffers + OS buffer cache
+
+cpu_tuple_cost                = 0.03
+
+random_page_cost              = 2
+
+# Error Reporting and Logging
+
+## Where to log
+
+log_destination               = 'csvlog'
+
+logging_collector             = on
+
+log_directory                 = '/var/log/edb/as<epas_version>'
+
+log_filename                  = 'epas-%a'
+
+log_truncate_on_rotation      = on
+
+## What to log
+
+log_line_prefix               = '%t [%p-%l]: user=%u,db=%d,app=%a,client=%h '
+
+log_checkpoints               = on
+
+log_lock_waits                = on
+
+log_temp_files                = 0
+
+log_min_duration_statement    = 2000
+
+checkpoint_warning     ​= 1min
+
+log_statement                 = 'ddl'        # optional
+
+ 
+
+# Autovacuum
+
+log_autovacuum_min_duration   = 0
+
+autovacuum_max_workers        = 5
+
+autovacuum_vacuum_cost_limit  = 3000
+
+# Client connection defaults
+
+idle_in_transaction_session_timeout = 10min
+
+lc_messages                   = 'C'
