@@ -1,0 +1,33 @@
+#!/bin/bash
+ 
+log_file="/tmp/cpu_usage.log"
+threshold=80
+email_recipient="your_email@example.com"
+email_subject="CPU Usage Alert"
+sendmail_command="/usr/sbin/sendmail"  # You may need to adjust this path
+ 
+while true; do
+    # Get current date and time
+    current_time=$(date +"%Y-%m-%d %H:%M:%S")
+ 
+    # Get CPU usage and append to the log file
+    cpu_usage=$(mpstat 1 1 | awk '$12 ~ /[0-9.]+/ { printf "%.2f", 100-$12 }')
+    echo "$current_time - CPU Usage: $cpu_usage%" >> "$log_file"
+ 
+    # Check if CPU usage exceeds the threshold
+    if (( $(echo "$cpu_usage >= $threshold" | bc -l) )); then
+        # Send email alert
+        email_body="CPU usage is above $threshold%: $cpu_usage%"
+        echo -e "Subject:$email_subject\n$email_body" | mailx -v -r "sender@example.com" -s "CPU Usage Alert" -S smtp="smtp.office365.com:587" -S smtp-use-starttls -S smtp-auth=login -S smtp-auth-user="sender@example.com" -S smtp-auth-password="your_password" -S ssl-verify=ignore "$email_recipient"
+    fi
+ 
+    # Sleep for 10 minutes before the next check
+    sleep 600
+ 
+    # Check if one hour has passed (3600 seconds)
+    if [ $((SECONDS % 3600)) -eq 0 ]; then
+        # Send hourly email summary
+        hourly_summary=$(tail -n 6 "$log_file")  # Get the last 6 lines of the log file
+        echo -e "Subject:$email_subject (Hourly Summary)\n$hourly_summary" | mailx -v -r "sender@example.com" -s "CPU Usage Hourly Summary" -S smtp="smtp.office365.com:587" -S smtp-use-starttls -S smtp-auth=login -S smtp-auth-user="sender@example.com" -S smtp-auth-password="your_password" -S ssl-verify=ignore "$email_recipient"
+    fi
+done

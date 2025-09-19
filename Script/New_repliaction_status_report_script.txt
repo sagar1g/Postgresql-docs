@@ -1,0 +1,40 @@
+#!/bin/bash
+
+export PGPASSWORD="Postgres@123"
+DB_USER="postgres"
+DB_PORT="5432"
+DB_HOST_1="10.0.25.156"
+
+DB_HOST_2="10.31.89.24"
+
+DB_NAME="postgres"
+psql=/usr/lib/pgsql-14.7/bin/psql
+
+QUERY="SELECT EXTRACT(EPOCH FROM now() - pg_last_xact_replay_timestamp())/60 AS replication_lag_minutes;"
+
+QUERY_1="select * from pg_stat_wal_receiver;"
+
+
+Best_dr_1_lag=$(PGPASSWORD="$PGPASSWORD" $psql -h $DB_HOST_1 -p $DB_PORT  -U $DB_USER -d $DB_NAME -c "$QUERY")
+Best_dr_1_lag_wal=$(PGPASSWORD="$PGPASSWORD" $psql -h $DB_HOST_1 -p $DB_PORT  -U $DB_USER -d $DB_NAME -c "$QUERY_1" -x)
+
+Best_dr_2_lag=$(PGPASSWORD="$PGPASSWORD" $psql -h $DB_HOST_2 -p $DB_PORT  -U $DB_USER -d $DB_NAME -c "$QUERY")
+
+Best_dr_2_lag_wal=$(PGPASSWORD="$PGPASSWORD" $psql -h $DB_HOST_2 -p $DB_PORT  -U $DB_USER -d $DB_NAME -c "$QUERY_1" -x)
+
+SUBJECT="Replication status BEST"
+
+RECIPIENTS="tech.support@clouddbtech.com akshay.kank@clouddbtech.com akash.patil@clouddbtech.com vijay.kothekar@adani.com Rajaguru.Muthukumar@adani.com RupinderJeet.Singh@adani.com atiwari@ntplindia.in mssupport.acx@adani.com deepesh@clouddbtech.com gaurav.vadakte@clouddbtech.com"
+
+EMAIL_BODY=$(printf "BEST A-B replication in sync\n\n%s\n\nBEST A-B replication streaming status\n\n%s\n\n\nBEST B-C replication in sync\n\n%s\n\n\nBEST B-C replication streaming status\n\n%s" "$Best_dr_1_lag" "$Best_dr_1_lag_wal" "$Best_dr_2_lag" "$Best_dr_2_lag_wal")
+
+
+#RECIPIENTS="tech.support@clouddbtech.com"
+
+# Send the Excel file via email
+#echo "BEST A-B replication in sync \n  \n$Best_dr_1_lag \n \n BEST A-B replication streaming status  \n \n$Best_dr_1_lag_wal \n  \n  \n BEST B-C replication in sync \n  $Best_dr_2_lag \n \n \n BEST B-C replication  streaming  status \n \n$Best_dr_2_lag_wal" | mutt -s "$SUBJECT"  $RECIPIENTS
+
+# Send the email
+echo "$EMAIL_BODY" | mutt -s "$SUBJECT" $RECIPIENTS
+
+echo "Replication status report sent to $EMAIL_RECIPIENT"

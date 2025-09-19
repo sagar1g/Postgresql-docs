@@ -1,0 +1,17 @@
+#!/bin/bash
+
+# Define the retention period in days
+retention_period=7
+
+# Specify the directory where archived WAL files are stored
+archive_directory="/path/to/archive/"
+
+# Use the find command to locate and delete old WAL files
+find "$archive_directory" -type f -name ".*" -mtime +"$retention_period" -exec rm {} \;
+----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+chmod +x cleanup_wal_files.sh
+
+
+Sunny Gupta <sunny.gupta@mobicule.comsunny.gupta@mobicule.com>
+v s <vs@mobicule.com>

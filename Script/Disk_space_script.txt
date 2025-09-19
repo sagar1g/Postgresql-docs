@@ -1,0 +1,59 @@
+--------------------------------------------------------------------------------------------------
+disk_space_alert.sh
+
+
+
+#!/bin/bash
+
+##### Change this section only as per every customers information requirement
+## ----------------------------------------------------
+CUST_ID="126110573"
+PIN="5357"
+From_email="nttin.operations.database@global.ntt"
+To_email="svc.nttin.ngaalerts.snoc@global.ntt"
+smtp_server="202.87.39.93"
+hostname=`mcollect-Bank-Prod-DB2`
+IP="142.79.238.120"
+DB_PORT="5432"
+#DB_PORT2="3308"          ## if instance is running on more than 2 ports
+
+## ----------------------------------------------------
+
+USER=dbdump
+MYSQLPASSWORD='@pass@1234A'
+
+mkdir -p "/home/infra.mg/scripts/monitor/monitor_DB_HOST"
+outputfile="/home/infra.mg/scripts/monitor/monitor_DB_HOST/system_details.txt"
+LOCATION=/home/infra.mg/scripts/
+
+
+echo $IP
+
+> $outputfile
+#--------------------------------------------
+### Below is for checking data directory space Utilization
+
+#Datadir=`mysql -e "show variables" -u$USER -p$MYSQLPASSWORD | grep -i datadir | awk '{print $2}'`
+
+#df -H $Datadir | awk '{ print $5 " " $1 }' | while read output;
+df -h /db_postgresql/data > /tmp/set_tmp.txt
+sed -i '1d'  /tmp/set_tmp.txt
+less /tmp/set_tmp.txt |  tr '\n' ' ' | awk '{ print $5 " " $1 }' | while read output;
+
+do
+ echo $output
+  usep=$(echo $output | awk '{ print $1}' | cut -d'%' -f1  )
+  partition=$(echo $output | awk '{ print $2 }' )
+
+   if [[ "$usep" -gt 90 ]]; then
+
+    echo "CUST ID : $CUST_ID"                                                          >> $outputfile
+    echo "PIN : $PIN"                                                                  >> $outputfile
+        echo "  "                                                                          >> $outputfile
+    echo "Server space is critical on data mount  \"$Datadir ($usep%)\" on $(hostname) ($IP) as on $(date)" >> $outputfile
+    echo "Alert: Almost out of disk space ($Datadir)  $usep%" >> $outputfile
+        echo "`cat $outputfile`"  | /home/infra.mg/scripts/sendEmail -f "$From_email" -t "nttin.db.postgresql@global.ntt" -t "$To_email" -u "CUST ID : $CUST_ID|| POSTGRE_SQL_DB Space Utilization is high on server $IP / $hostname " -s "$smtp_server:25"
+
+fi
+
+done

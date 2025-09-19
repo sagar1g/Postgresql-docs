@@ -1,0 +1,42 @@
+#!/bin/bash
+
+CUST_ID="126110573"
+PIN="5357"
+From_email="nttin.operations.database@global.ntt"
+To_email="svc.nttin.ngaalerts.snoc@global.ntt"
+smtp_server="202.87.39.93"
+hostname=`Digital-DB2`
+IP="142.79.238.171"
+#DB_PORT="5432"
+
+## ------------------------------------------------------------------------------------------------
+
+USER=nagios_mk
+MYSQLPASSWORD='Monitoring$!23'
+
+mkdir -p "/db_postgresql/long_run/monitor/monitor_DB_HOST"
+outputfile="/db_postgresql/long_run/monitor/monitor_DB_HOST/system_details.txt"
+LOCATION=/db_postgresql/long_run/
+
+
+echo $IP
+
+> $outputfile
+#--------------------------------------------------------------------------------------------------------
+
+longrun_dir=/data/long_run
+EMAIL=/data/backup_log
+PSQL=/usr/pgsql-15/bin/psql
+export PGPASSWORD='Admin@1234'; psql -U 'postgres' -d 'postgres' -c "select datname,pid,query,usesysid,usename,application_name,client_addr,state,query_start,now() - query_start AS duration from pg_stat_activity WHERE (now() - pg_stat_activity.query_start)  > interval '5 seconds';" > $longrun_dir/long_run_query.txt
+cat $longrun_dir/long_run_query.txt|egrep -v 'datname|--|rows'|grep . >  $longrun_dir/session.txt
+if [ -s $longrun_dir/session.txt ]
+then
+        echo CUST ID : $CUST_ID                                                         >> $outputfile
+        echo PIN : $PIN                                                         >> $outputfile
+        echo "  "                                                               >> $outputfile
+        echo "Long running queries on (server ip = $IP - $hostname )"           >> $outputfile
+echo "`cat $outputfile`" | $EMAIL/sendEmail  -f "nttin.operations.database@global.ntt" -t "nttin.db.postgresql@global.ntt" -t "$To_email" -u "CUST ID : $CUST_ID|| Long rung queries on Server $IP / $hostname" -s "202.87.39.93:25" -a $longrun_dir/long_run_query.txt
+
+else
+echo "Do Nothing"
+fi

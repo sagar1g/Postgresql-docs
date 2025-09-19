@@ -1,0 +1,52 @@
+#!/bin/bash
+
+CUST_ID="126110573"
+PIN="5357"
+From_email="nttin.operations.database@global.ntt"
+To_email="svc.nttin.ngaalerts.snoc@global.ntt"
+smtp_server="202.87.39.93"
+hostname=`Digital-DB2`
+IP="142.79.238.171"
+#DB_PORT="5432"
+# ------------------------------------------------------------------------------------------------
+
+USER=nagios_mk
+MYSQLPASSWORD='Monitoring$!23'
+
+mkdir -p "/db_postgresql/long_run/monitor/monitor_DB_HOST"
+outputfile="/db_postgresql/long_run/monitor/monitor_DB_HOST/system_details.txt"
+LOCATION=/db_postgresql/long_run/
+
+
+echo $IP
+
+> $outputfile
+#--------------------------------------------------------------------------------------------------------
+####################Max Connection #####################################################
+
+psql=/usr/pgsql-15/bin/psql
+
+export PGPASSWORD=Admin@1234
+used_connection=$($psql -U postgres -d postgres -tAc 'SELECT count(*) from pg_stat_activity;')
+
+echo "$used_connection"
+
+export PGPASSWORD=Admin@1234
+max_connection=$($psql -U postgres -d postgres -tAc 'show max_connections;')
+
+echo "$max_connection"
+
+x=$((($used_connection*100)/$max_connection))
+echo "$x"
+
+if [ "$x" -gt 80 ];then
+        echo CUST ID : $CUST_ID                                                         >> $outputfile
+        echo PIN : $PIN                                                         >> $outputfile
+        echo "  "                                                               >> $outputfile
+        echo "Max Connection  on (server ip = $IP - $hostname )"           >> $outputfile
+echo "`cat $outputfile`" | $EMAIL/sendEmail  -f "nttin.operations.database@global.ntt" -t "nttin.db.postgresql@global.ntt" -t "$To_email" -u "CUST ID : $CUST_ID|| Max connection  on Server $IP / $hostname" -s "202.87.39.93:25" 
+
+
+else
+    echo "do nothing."
+fi

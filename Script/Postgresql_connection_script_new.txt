@@ -1,0 +1,83 @@
+#!/bin/bash
+
+#-----------------------------------------------------------------------------
+# Script Name:    check_postgress_connection.sh
+# Author:         Burhanuddin D M
+# Email:          burhanuddin.mandasourwala@global.ntt
+# Created:        2025-04-07
+# Modified:       NA
+# Version:        2025.0.1
+# Description:    This check is compatible with check-mk plugin format.
+#                 It checks the connection for all PostgreSQL database.
+#                 It verifies the connection status and logs the results.
+#
+# Implementation Steps:
+# 1. Ensure shell script is executable.
+# 2. Make sure psql is installed ($ which psql) --> ideally path will be present under postgres
+# 3. Update the connection string with your database details. Which will be seen below in "Define the connection paramerters"
+# 4. Deploy file under, directory called "plugins" which will be found under "check_mk"
+# Example : /usr/lib/check_mk_agent/plugins/
+# 5. Test output by running cmd:
+# $ check_mk_agent
+# 6. Post services are visable in cmd prompt, Raise ticket with TNA team for doing 1st re-discovery
+#
+# Friendly note:
+# Please feel free to add your comments in case of any enhancement required, Also if any issue feel free to reach me over email.
+# -----------------------------------------------------------------------------
+
+# PostgreSQL credentials
+PG_HOST="localhost"
+PG_PORT="5432"
+PG_DB="postgres"
+PG_USER="nagios_mk"
+PG_PASSWORD='Monitoring$!23'
+PG_EXE_PATH="/else/pgsql-9.4/bin/psql"
+
+# Thresholds
+WARNING_THRESHOLD=10
+CRITICAL_THRESHOLD=20
+
+# Execute the query
+QUERY_RESULT=$(PGPASSWORD=$PG_PASSWORD $PG_EXE_PATH -h $PG_HOST -p $PG_PORT -d $PG_DB -U $PG_USER -c "SELECT d.datname, COUNT(s.datid) AS current_connections, (SELECT setting::integer FROM pg_settings WHERE name = 'max_connections') AS max_connections FROM pg_database d LEFT JOIN pg_stat_activity s ON (s.datid = d.oid) WHERE d.datname NOT IN ('template0', 'template1') GROUP BY d.datname ORDER BY d.datname;")
+
+# Parse the query result
+echo "$QUERY_RESULT" | while IFS="|" read -r datname current_connections max_connections; do
+    # Skip the header, separator lines, and empty lines
+    if [[ "$datname" == " datname " || "$datname" == "--------------------------" || -z "$datname" ]]; then
+        continue
+    fi
+
+    # Trim whitespace
+    datname=$(echo $datname | xargs)
+    current_connections=$(echo $current_connections | xargs)
+    max_connections=$(echo $max_connections | xargs)
+
+    # Ensure current_connections and max_connections are numeric
+    if ! [[ "$current_connections" =~ ^[0-9]+$ ]] || ! [[ "$max_connections" =~ ^[0-9]+$ ]]; then
+        continue
+    fi
+
+    # Determine status code
+    if (( current_connections >= CRITICAL_THRESHOLD )); then
+        STATUS_CODE=2
+        STATUS="CRITICAL"
+    elif (( current_connections >= WARNING_THRESHOLD )); then
+        STATUS_CODE=1
+        STATUS="WARNING"
+    else
+        STATUS_CODE=0
+        STATUS="OK"
+    fi
+
+    # Service name
+    SERVICE_NAME="PostgreSQL_Connections_$datname"
+
+    # Performance data
+    PERF_DATA="current_connections=$current_connections;$WARNING_THRESHOLD;$CRITICAL_THRESHOLD;0;"
+
+    # Message
+    MESSAGE="Database: $datname, Current Connections: $current_connections, Max Connections: $max_connections"
+
+    # Output in Check_MK MRPE format
+    echo "$STATUS_CODE $SERVICE_NAME $PERF_DATA $MESSAGE"
+done

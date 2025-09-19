@@ -1,0 +1,14 @@
+#!/bin/bash
+longrun_dir=/var/lib/pgsql/long_run
+echo " "
+echo " "
+HOSTNAME=`hostname`
+PSQL="/usr/pgsql-15/bin/psql"
+PORT=5432
+HOST="localhost"
+DB="sample"
+USER="postgres"
+echo "------***WHAT ARE THE QUERY IS RUNING MORE THAN 1 MINUTES***------"
+$PSQL -d $DB -U $USER -p $PORT -c "select pid,user,pg_stat_activity.query_start,
+now()-pg_stat_activity.query_start as query_time,query,state,wait_event_type,
+wait_event from pg_stat_activity where (now()-pg_stat_activity.query_start)>interval '5 minutes';" > $longrun_dir/long_run_$(date +"%d-%m-%y")"

@@ -1,0 +1,17 @@
+shared_buffers = 8GB
+
+effective_cache_size = 24GB
+
+maintenance_work_mem = 2GB
+
+default_statistics_target = 100
+
+effective_io_concurrency = 200
+
+max_worker_processes = 8
+
+max_parallel_workers_per_gather = 4
+
+max_parallel_workers = 8
+
+max_parallel_maintenance_workers = 4
