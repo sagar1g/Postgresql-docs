@@ -1,0 +1,64 @@
+#!/bin/bash
+
+# PostgreSQL connection details
+PG_USER="tbx_admin"
+PG_PASSWORD="tbx@123!!"
+PG_HOST="10.10.163.23"
+PG_DB="postgres"  # Replace with your database name
+INTERVAL=60  # Time interval in seconds
+LOG_FILE="/home/postgres/monitoring/scripts/wal_speed/wal_generation_speed.log"  # Updated log file location
+
+# Ensure log directory exists
+mkdir -p "$(dirname "$LOG_FILE")"
+
+# Function to get the current LSN in bytes
+get_current_lsn_in_bytes() {
+    PGPASSWORD="$PG_PASSWORD" /usr/lib/postgresql/14/bin/psql -U "$PG_USER" -h "$PG_HOST" -p 4702 -d "$PG_DB" -t -c "SELECT pg_wal_lsn_diff(pg_current_wal_lsn(), '0/0')::bigint;" | tr -d '[:space:]'
+}
+
+# Initialize
+previous_lsn=$(get_current_lsn_in_bytes)
+echo "Monitoring WAL generation speed... Logging to $LOG_FILE"
+echo "Time, WAL Generated (MB)" >> "$LOG_FILE"
+
+# Monitoring loop
+while true; do
+    sleep "$INTERVAL"
+    current_lsn=$(get_current_lsn_in_bytes)
+
+    # Calculate WAL difference in bytes
+    wal_diff=$((current_lsn - previous_lsn))
+
+    # Convert to MB
+    wal_diff_mb=$(echo "$wal_diff / 1024 / 1024" | bc)
+
+    # Log the result
+    echo "$(date '+%Y-%m-%d %H:%M:%S'), $wal_diff_mb MB" >> "$LOG_FILE"
+
+    # Update the previous LSN for the next iteration
+    previous_lsn=$current_lsn
+done
+
+
+
+===============================================================================================
+
+#Cron for cpu_capture:
+*/5 * * * * sleep 30 && /bin/bash /data/monitoring/scripts/capture_cpu_status.sh >> /data/monitoring/scripts/cpu_status.log 2>&1
+
+#Cron for active_connections:
+#*/20 * * * * sleep 30 && /bin/bash /home/postgres/monitoring/scripts/active_connection_new.sh >> /home/postgres/monitoring/scripts/cron_output.log 2>&1
+
+# Cron for Active_Connection_DB:
+*/1 * * * * sleep 30 && /bin/bash /home/postgres/monitoring/scripts/active_connection_db/active_connection_db.sh >> /home/postgres/monitoring/scripts/active_connection_db/cron_output.log 2>&1
+
+
+#Cron for Unused_index:
+*/20 * * * * sleep 30 && /bin/bash /home/postgres/monitoring/unused_script/unused_index.sh >> /home/postgres/monitoring/unused_script/unused.log 2>&1
+
+
+# Cron for table_size_monitor on DB:
+0 2 * * *  sleep 30 && /bin/bash /home/postgres/monitoring/scripts/table_size_monitor_db/table_size_monitor.sh >> /home/postgres/monitoring/scripts/table_size_monitor_db/hes_monitor_table.log 2>&1
+
+#Cron for wal_speed:
+*/1 * * * * /home/postgres/monitoring/scripts/wal_speed/wal_speed.sh >> /home/postgres/monitoring/scripts/wal_speed/wal_monitor_cron.log 2>&1

@@ -1,0 +1,33 @@
+#!/bin/bash
+
+# Define database connection details
+DB_NAME="monitoring"
+DB_USER="postgres"
+DB_PASSWORD="India@123456"
+DB_HOST="localhost"   # Add the host name or IP address of your PostgreSQL server
+PGPORT=4702
+
+# Set environment variables for password and other connection details
+export PGHOST=$DB_HOST
+export PGPORT=$PGPORT
+export PGUSER=$DB_USER
+export PGPASSWORD=$DB_PASSWORD
+
+# Check if PostgreSQL is ready
+pg_isready -h $DB_HOST -p $PGPORT
+if [ $? -ne 0 ]; then
+    echo "PostgreSQL is not running on port $PGPORT"
+    exit 1
+fi
+
+# Capture the CPU status using top command
+CPU_STATS=$(top -bn1 | grep "Cpu(s)" | sed "s/.*, *\([0-9.]*\)%* id.*/\1/" | awk '{print 100 - $1}')
+USER_CPU=$(top -bn1 | grep "Cpu(s)" | awk '{print $2}' | cut -d. -f1)
+SYSTEM_CPU=$(top -bn1 | grep "Cpu(s)" | awk '{print $4}' | cut -d. -f1)
+IDLE_CPU=$(echo "100 - $USER_CPU - $SYSTEM_CPU" | bc)
+
+# Insert CPU usage stats into the PostgreSQL database
+/usr/bin/psql -p $PGPORT -d $DB_NAME -c "INSERT INTO cpu_usage (user_cpu, system_cpu, idle_cpu) VALUES ($USER_CPU, $SYSTEM_CPU, $IDLE_CPU);"
+
+# Clear the password environment variable
+unset PGPASSWORD

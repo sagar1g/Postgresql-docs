@@ -1,0 +1,42 @@
+#!/bin/bash
+
+# DB credentials
+HES_DB="HES"
+MONITORING_DB="monitoring"
+PGUSER="tbx_admin"
+PGPASSWORD="tbx@123!!"
+PGHOST="10.10.163.23"
+PGPORT="4702"
+
+# Export password for non-interactive psql access
+export PGPASSWORD="$PGPASSWORD"
+
+# Temporary file to hold query results
+TEMP_FILE=$(mktemp)
+
+# Step 1: Get table sizes from ALL schemas in HES (except system schemas), in MB
+psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$HES_DB" -Atc "
+SELECT
+  table_schema,
+  table_name,
+  ROUND(pg_relation_size(quote_ident(table_schema) || '.' || quote_ident(table_name)) / 1024.0 / 1024.0, 2) AS table_size_mb,
+  ROUND(pg_total_relation_size(quote_ident(table_schema) || '.' || quote_ident(table_name)) / 1024.0 / 1024.0, 2) AS total_size_mb
+FROM information_schema.tables
+WHERE table_type = 'BASE TABLE' AND table_schema NOT IN ('pg_catalog', 'information_schema');
+" > "$TEMP_FILE"
+
+# Step 2: Insert results into monitoring DB
+while IFS='|' read -r schema_name table_name table_size_mb total_size_mb; do
+  psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$MONITORING_DB" -c "
+    INSERT INTO table_size_monitor (source_db, schema_name, table_name, table_size_mb, total_size_mb)
+    VALUES ('HES', '$schema_name', '$table_name', $table_size_mb, $total_size_mb);
+  "
+done < "$TEMP_FILE"
+
+# Step 3: Delete records older than 45 days
+psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$MONITORING_DB" -c "
+  DELETE FROM table_size_monitor WHERE captured_at < NOW() - INTERVAL '45 days';
+"
+
+# Cleanup
+rm -f "$TEMP_FILE"

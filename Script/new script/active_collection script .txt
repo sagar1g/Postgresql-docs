@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# Set the full path to psql in case it's not available in the cron environment
+export PATH=/usr/lib/pgsql-15.6/bin:$PATH
+
+# Set PostgreSQL connection parameters
+export PGHOST="10.10.163.23"
+export PGPORT="4702"
+export PGDATABASE="monitoring"
+export PGUSER="tbx_admin"
+export PGPASSWORD="tbx@123!!"
+
+# Execute the query and insert into the database
+psql -p $PGPORT -d $PGDATABASE -U $PGUSER -c "
+INSERT INTO active_connection_stats (datname, state, client_addr, connection_count, recorded_at)
+SELECT datname, state, client_addr, count(*), now()
+FROM pg_stat_activity
+GROUP BY datname, state, client_addr;
+"
+
+# Notify user
+echo "Query result inserted into the database"
+
+# Unset the password for security
+unset PGPASSWORD
