@@ -65,7 +65,7 @@ GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA schema_name TO username;
 alter schema old_schema_name rename to new_schema_name;
 
 6.change schema owner:- 
-alter schema schema_name old_owner owner to new_owner;
+ALTER SCHEMA schema_name OWNER TO new_owner;
 
 7.change owner of tables:- 
 select 'Alter table '||t.schemaname||'.'||t.tablename ||' owner to db_varthana;' from pg_tables t where schemaname='digital_collections_varthana';
@@ -163,6 +163,7 @@ GRANT monitoring_role TO your_user;
 2.Grant the pg_monitor Role
 
 GRANT pg_monitor TO your_user;
+
 
 
 
