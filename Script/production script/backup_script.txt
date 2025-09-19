@@ -1,0 +1,13 @@
+if [ "$?" = "0" ]; then
+        echo "NTT IT Services Private Limited(180.179.236.10) Postgresql Backup is successful" > /home/postgres/backup_log/postgres_logfile
+echo "`cat /home/postgres/backup_log/postgres_logfile`" | /home/postgres/backup_log/sendEmail -f "nttin.operations.database@global.ntt" -t "gaurav.vadakte@global.ntt" -u "NTT IT Services Private Limited(180.179.20.179) Postgresql Backup is successful" -s "202.87.39.93:25"
+
+
+else
+        echo "NTT IT Services Private Limited(180.179.236.10) Postgresql Backup is failed" > /home/postgres/backup_log/postgres_logfile
+echo "`cat /home/postgres/backup_log/postgres_logfile`" | /home/postgres/backup_log/sendEmail -f "nttin.operations.database@global.ntt" -t "gaurav.vadakte@global.ntt" -u "NTT IT Services Private Limited(180.179.20.179)Postgresql Backup is failed" -s "202.87.39.93:25"
+fi
+
+
+pg_basebackup -D /data/10.5/data  -h 10.14.53.2 -p 5432 -Xs -R -P
+

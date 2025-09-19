@@ -1,0 +1,37 @@
+#!/bin/bash
+
+# PostgreSQL connection details
+PG_USER="postgres"
+PG_HOST="10.10.66.69"
+PG_DB="postgres"  # Replace with your database name
+INTERVAL=60  # Time interval in seconds (e.g., 60 seconds for 1 minute)
+LOG_FILE="/data/wal_generation_speed.log"  # Path to store the log file
+
+# Function to get the current LSN in bytes
+get_current_lsn_in_bytes() {
+    /usr/lib/postgresql/15/bin/psql -U $PG_USER -h $PG_HOST -p 4702 -d $PG_DB -t -c "SELECT pg_wal_lsn_diff(pg_current_wal_lsn(), '0/0')::bigint;" | tr -d '[:space:]'
+}
+
+# Initialize
+previous_lsn=$(get_current_lsn_in_bytes)
+echo "Monitoring WAL generation speed... Logging to $LOG_FILE"
+echo "Time, WAL Generated (MB)" >> $LOG_FILE
+
+# Monitoring loop
+while true; do
+    sleep $INTERVAL
+    current_lsn=$(get_current_lsn_in_bytes)
+
+    # Calculate WAL difference in bytes
+    wal_diff=$((current_lsn - previous_lsn))
+
+    # Convert to MB
+    wal_diff_mb=$(echo "$wal_diff / 1024 / 1024" | bc)
+
+    # Log the result
+    echo "$(date '+%Y-%m-%d %H:%M:%S'), $wal_diff_mb MB" >> $LOG_FILE
+
+    # Update the previous LSN for the next iteration
+    previous_lsn=$current_lsn
+done
+

@@ -1,0 +1,93 @@
+#!/bin/bash
+
+# Function to display usage
+usage() {
+    echo "Usage: $0 --dbname=<input> --dbuser=<input> --dbpass=<input> --dbhost=<input> --dbport=<input> --query=<input> [-c <number>] [-w <number>]"
+    exit 1
+}
+
+# Default thresholds
+WARNING_THRESHOLD=75
+CRITICAL_THRESHOLD=100
+
+# Parse command-line arguments
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        --dbname=*)
+        PGDATABASE="${1#*=}"
+        shift
+        ;;
+        --dbuser=*)
+        PGUSER="${1#*=}"
+        shift
+        ;;
+        --dbpass=*)
+        PGPASSWORD="${1#*=}"
+        shift
+        ;;
+        --dbhost=*)
+        PGHOST="${1#*=}"
+        shift
+        ;;
+        --dbport=*)
+        PGPORT="${1#*=}"
+        shift
+        ;;
+        --query=*)
+        QUERY="${1#*=}"
+        shift
+        ;;
+        -c)
+        CRITICAL_THRESHOLD="$2"
+        shift 2
+        ;;
+        -w)
+        WARNING_THRESHOLD="$2"
+        shift 2
+        ;;
+        *)
+        usage
+        ;;
+    esac
+done
+
+# Check if all required arguments are provided
+if [ -z "$PGDATABASE" ] || [ -z "$PGUSER" ] || [ -z "$PGPASSWORD" ] || [ -z "$PGHOST" ] || [ -z "$PGPORT" ] || [ -z "$QUERY" ]; then
+    usage
+fi
+
+while true; do
+    # Connect to PostgreSQL and execute the query
+    SESSION_COUNT=$(PGPASSWORD="$PGPASSWORD" psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" -tAc "$QUERY")
+
+    # Extract the state from the query
+    if [[ "$QUERY" == *"state='active'"* ]]; then
+        STATE="active"
+    elif [[ "$QUERY" == *"state='idle'"* ]]; then
+        STATE="idle"
+    else
+        echo "UNKNOWN: Unable to determine state from query."
+        exit 3
+    fi
+
+    # Check if the session count is empty
+    if [ -z "$SESSION_COUNT" ]; then
+        echo "UNKNOWN: Unable to retrieve session count."
+        exit 3
+    fi
+
+    # Check the session count against thresholds
+    if (( SESSION_COUNT > CRITICAL_THRESHOLD )); then
+        echo "Critical: Postgres_${STATE}_session: $SESSION_COUNT | Critical: $CRITICAL_THRESHOLD ; Warning: $WARNING_THRESHOLD"
+        exit 2
+    elif (( SESSION_COUNT > WARNING_THRESHOLD )); then
+        echo "Warning: Postgres_${STATE}_session: $SESSION_COUNT | Critical: $CRITICAL_THRESHOLD ; Warning: $WARNING_THRESHOLD"
+        exit 1
+    else
+        echo "Ok: Postgres_${STATE}_session: $SESSION_COUNT | Critical: $CRITICAL_THRESHOLD ; Warning: $WARNING_THRESHOLD"
+        exit 0
+    fi
+
+    # Wait for 2 minutes before running the query again
+    sleep 120
+done

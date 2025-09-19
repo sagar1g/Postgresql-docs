@@ -1,0 +1,93 @@
+Archive cleanup:-
+0 5 * * * find /archival -type f -mtime +30 -name "00000*" -exec rm -f {} \; > /data/pg_archive_cleanup.log 2>&1
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Memory cleanup:-
+*/20 * * * * /usr/bin/sync; /usr/bin/sh -c 'echo 3 > /proc/sys/vm/drop_caches'
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Backup cleanup:-
+0 22 * * *  find $backup_dir/PostgreSQL_Base_Backup* -type d -mtime +3 -name "PostgreSQL_Base_Backup_*" -exec rm -rv {} \;
+
+
+----------------------------------------------------------------------------------------------------------------------------------------------------
+Monitoring system resource alert:-
+
+
+*/2 * * * * /bin/sh /usr/local/sbin/system-mon.sh > /dev/null 2>&1
+
+
+
+
+vi /usr/local/sbin/system-mon.sh
+
+outputfile=/home/monitoring/system-`date +%d-%m-%Y:%H-%M`.txt
+echo >> $outputfile
+echo >> $outputfile
+echo "##########################################################################" >> $outputfile
+date >> $outputfile
+echo "##########################################################################" >> $outputfile
+echo >> $outputfile
+echo "Memory utilization" >> $outputfile
+echo "------------------------------------------------------------" >> $outputfile
+echo >> $outputfile
+free -m >> $outputfile
+echo >> $outputfile
+echo "IOSTAT command output after 5 second interval (iostat 5 2)" >> $outputfile
+echo "------------------------------------------------------------" >> $outputfile
+echo >> $outputfile
+iostat 5 2 >> $outputfile
+echo >> $outputfile
+echo "SAR command output after 5 second interval (sar -u 5 2)" >> $outputfile
+echo "------------------------------------------------------------" >> $outputfile
+echo >> $outputfile
+sar -u 5 2 >> $outputfile
+echo >> $outputfile
+echo "Top 10 CPU consumption process" >> $outputfile
+echo "------------------------------------------------------------" >> $outputfile
+echo >> $outputfile
+ps -eo pcpu,pid,user,args | sort -k 1 -r | head -20 >> $outputfile
+echo >> $outputfile
+echo "Top 10 MEMORY consumption process" >> $outputfile
+echo "------------------------------------------------------------" >> $outputfile
+echo >> $outputfile
+ps -eo pmem,pid,user,args | sort -k 1 -r | head -20 >> $outputfile
+echo >> $outputfile
+echo "Total SAP process" >> $outputfile
+echo "------------------------------------------------------------" >> $outputfile
+ps aux |grep sap |wc -l >> $outputfile
+echo >> $outputfile
+echo "Total SAP process" >> $outputfile
+echo "------------------------------------------------------------" >> $outputfile
+ps aux |grep sap >> $outputfile
+echo >> $outputfile
+echo "Load average" >> $outputfile
+echo "------------------------------------------------------------" >> $outputfile
+w |grep load |awk -F":" '{print $5}' >> $outputfile
+echo >> $outputfile
+echo "SAR -d command output after 5 second interval (sar -p -d 5 2)" >> $outputfile
+echo "------------------------------------------------------------" >> $outputfile
+echo >> $outputfile
+sar -p -d 5 2 >> $outputfile
+echo "Top Command output at the particular time (top -n 3 -b)" >> $outputfile
+echo "------------------------------------------------------------" >> $outputfile
+echo >> $outputfile
+top -n 3 -b >> $outputfile
+echo "Top 10 CPU consumption process" >> $outputfile
+echo "------------------------------------------------------------" >> $outputfile
+echo >> $outputfile
+ps -eo pcpu,pid,user,args | sort -k 1 -r | head -20 >> $outputfile
+echo >> $outputfile
+echo "Load average" >> $outputfile
+echo "------------------------------------------------------------" >> $outputfile
+w |grep load |awk -F":" '{print $5}' >> $outputfile
+echo >> $outputfile
+echo "IOTOP  process" >> $outputfile
+echo "------------------------------------------------------------" >> $outputfile
+/usr/sbin/iotop --batch --only -n 25  >> $outputfile
+echo >> $outputfile
+
+echo "##########################################################################" >> $outputfile
+

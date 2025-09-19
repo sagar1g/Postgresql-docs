@@ -1,0 +1,48 @@
+#!/bin/bash
+
+##### Change this section only as per every customer's information requirement
+## ----------------------------------------------------
+CUST_ID="152858838"
+PIN="6459"
+From_email="nttin.operations.database@global.ntt"
+To_email="nttin.db.postgresql@global.ntt"
+smtp_server="202.87.39.93"
+hostname="T98_MDM_MST_DB2"  # Correctly get the system hostname
+IP="100.124.36.16"
+DB_PORT="6412"
+
+USER=nagios_mk
+MYSQLPASSWORD='Monitoring$!23'
+
+mkdir -p "/home/infra.mg/scripts/monitor/monitor_DB_HOST"
+outputfile="/home/infra.mg/scripts/monitor/monitor_DB_HOST/system_details.txt"
+LOCATION=/home/infra.mg/scripts/
+
+echo $IP
+
+> $outputfile
+#--------------------------------------------
+
+# Check disk space on the PostgreSQL data directory
+df -h /backup > /tmp/set_tmp.txt
+sed -i '1d' /tmp/set_tmp.txt
+
+# Process the disk space usage
+cat /tmp/set_tmp.txt | awk '{ print $5 }' | while read usep;
+do
+  echo $usep
+  usep=$(echo $usep | cut -d'%' -f1)  # Extract percentage usage
+  partition="/backup"  # Get partition name
+
+  # Check if usage is above threshold (e.g., 90%)
+  if [ "$usep" -gt 75 ]; then
+    echo "CUST ID : $CUST_ID" >> $outputfile
+    echo "PIN : $PIN" >> $outputfile
+    echo " " >> $outputfile
+    echo "Server space is critical on backup mount \"$partition ($usep%)\" on $hostname ($IP) as on $(date)" >> $outputfile
+    echo "Alert: Almost out of disk space ($partition)  $usep%" >> $outputfile
+
+    # Send email alert
+    cat $outputfile | /home/infra.mg/scripts/sendEmail -f "$From_email" -t "nttin.db.postgresql@global.ntt" -t "tech.support@clouddbtech.com" -u "CUST ID : $CUST_ID || POSTGRE_SQL_backup Space Utilization is high on server $IP / $hostname" -s "$smtp_server:25"
+  fi
+done

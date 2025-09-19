@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# Date for the report
+REPORT_DATE=$(date --date='yesterday' +%Y-%m-%d)
+LOG_DATE=$(date --date='yesterday' +%d)
+
+# Directory for PgBadger reports
+REPORT_DIR="/data/pgbdger"
+
+# Generate PgBadger report (run in the foreground to avoid race conditions)
+pgbadger -v -f stderr -o ${REPORT_DIR}/${REPORT_DATE}-report.html -p '%m [%p]' /data/patroni/pg_log/postgresql-${LOG_DATE}.log > ${REPORT_DIR}/backup_${LOG_DATE}.log 2>&1
+
+# Check if the report was generated successfully
+if [ -f "${REPORT_DIR}/${REPORT_DATE}-report.html" ]; then
+    # Compress the report
+    gzip -f ${REPORT_DIR}/${REPORT_DATE}-report.html
+
+    # Send the compressed report via email
+    echo "Please find the Yesterdays compressed AEML PgBadger report for ${REPORT_DATE} attached." | \
+    mutt -s "PgBadger Report - ${REPORT_DATE}" -a "${REPORT_DIR}/${REPORT_DATE}-report.html.gz" -- akash.patil@clouddbtech.com gaurav.vadakte@clouddbtech.com tech.support@clouddbtech.com akshay.kank@clouddbtech.com Rajaguru.Muthukumar@adani.com swapnil.patil@clouddbtech.com harmin.patil@clouddbtech.com rushikesh.chaudhari@clouddbtech.com shoaib.khan@clouddbtech.com
+else
+    echo "PgBadger report generation failed for ${REPORT_DATE}." >> ${REPORT_DIR}/error_${LOG_DATE}.log

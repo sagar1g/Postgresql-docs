@@ -1,0 +1,30 @@
+#!/bin/bash
+
+# Define variables
+LOGFILE="/var/log/pg_basebackup_log_$(date +'%Y%m%d').log"
+EMAIL="tech.support@clouddbtech.com"
+SUBJECT="pg_basebackup Process Completed - $(date +'%Y%m%d')"
+BACKUP_DIR="/path/to/your/backups/pg_basebackup_$(date +'%Y%m%d')"
+PG_HOST="192.168.29.83"     # Replace with your PostgreSQL server IP or hostname
+PG_USER="postgres"
+PG_PORT=5432
+
+# Create backup directory
+mkdir -p $BACKUP_DIR
+
+# Start logging
+echo "pg_basebackup process started at $(date)" > $LOGFILE
+
+# Perform pg_basebackup
+pg_basebackup -h $PG_HOST -U $PG_USER -p $PG_PORT -D $BACKUP_DIR -Fp -Xs -P -v >> $LOGFILE 2>&1
+
+if [ $? -eq 0 ]; then
+    echo "pg_basebackup completed successfully at $(date)" >> $LOGFILE
+else
+    echo "pg_basebackup failed at $(date)" >> $LOGFILE
+fi
+
+# No compression step needed here
+
+# Send the log via email
+mutt -s "$SUBJECT" $EMAIL < $LOGFILE
