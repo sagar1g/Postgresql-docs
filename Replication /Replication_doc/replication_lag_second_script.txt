@@ -1,0 +1,69 @@
+#!/bin/bash
+
+CUST_ID="126110573"
+PIN="5357"
+From_email="nttin.operations.database@global.ntt"
+#To_email="svc.nttin.ngaalerts.snoc@global.ntt"
+smtp_server="202.87.39.93"
+hostname=`Digital-DB2`
+IP="142.79.238.171"
+#DB_PORT="5432"
+# ------------------------------------------------------------------------------------------------
+
+USER=nagios_mk
+MYSQLPASSWORD='Monitoring$!23'
+
+mkdir -p "/db_postgresql/replication/monitor/monitor_DB_HOST"
+outputfile="/db_postgresql/replication/monitor/monitor_DB_HOST/system_details.txt"
+LOCATION=/db_postgresql/replication/
+
+echo $IP
+
+> $outputfile
+#--------------------------------------------------------------------------------------------------------
+
+##############################Replication lag ###################################################################
+
+psql=/usr/pgsql-15/bin/psql
+EMAIL=/db_postgresql/backup_log
+
+export PGPASSWORD=Admin@1234
+replication_lag=$($psql -U postgres -d postgres -tAc 'select now() -pg_last_xact_replay_timestamp() as replication_lag;')
+
+echo "$replication_lag"
+
+####set threshold value  (15 minute = 900second)####################
+
+threshold_seconds=900
+
+#################### Convert the replication lag to seconds ################################3
+
+IFS=' ' read -ra lag_parts <<< "$replication_lag"
+lag_sec=0
+
+##############Conversion############################
+
+for part in "${lag_parts[@]}"; do
+  if [[ $part == "days" ]]; then
+    lag_sec=$((lag_sec + 86400 * ${lag_parts[0]}))
+  elif [[ $part == "hours" ]]; then
+    lag_sec=$((lag_sec + 3600 * ${lag_parts[0]}))
+  elif [[ $part == "minutes" ]]; then
+    lag_sec=$((lag_sec + 60 * ${lag_parts[0]}))
+  elif [[ $part == "seconds" ]]; then
+    lag_sec=$((lag_sec + ${lag_parts[0]}))
+  fi
+done
+
+##########  Check if the replication lag exceeds the threshold ###################################
+if [ "$lag_sec" -gt "$threshold_seconds" ]; then
+   echo CUST ID : $CUST_ID                                                         >> $outputfile
+        echo PIN : $PIN                                                         >> $outputfile
+        echo "  "                                                               >> $outputfile
+        echo "Replication Break on (server ip = $IP - $hostname )"           >> $outputfile
+echo "`cat $outputfile`" | $EMAIL/sendEmail  -f "nttin.operations.database@global.ntt" -t "nttin.db.postgresql@global.ntt" -t "$To_email" -u "CUST ID : $CUST_ID|| Replication Break on Server $IP / $hostname" -s "202.87.39.93:25" 
+
+else
+   echo "Do Nothing"
+fi
+
