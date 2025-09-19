@@ -1,0 +1,124 @@
+
+PostgreSQL Extension Installation and Creation Guide
+====================================================
+
+This document outlines how to install and create the following PostgreSQL extensions:
+
+1. pg_auth_mon
+2. pg_cron
+3. pg_stat_kcache
+4. plpython3u
+5. set_user
+
+----------------------------------------------------
+1. pg_auth_mon
+----------------------------------------------------
+
+a. Check availability:
+   SELECT * FROM pg_available_extensions WHERE name = 'pg_auth_mon';
+
+b. If not available, install from source:
+   i. Install PostgreSQL development packages.
+      On Debian/Ubuntu:
+         sudo apt install postgresql-server-dev-all git make
+
+   ii. Clone the repository:
+         git clone https://github.com/RafiaSabih/pg_auth_mon
+         cd pg_auth_mon
+
+   iii. Build and install:
+         make
+         sudo make install
+
+c. Enable the extension:
+   CREATE EXTENSION pg_auth_mon;
+
+----------------------------------------------------
+2. pg_cron
+----------------------------------------------------
+
+a. Check availability:
+   SELECT * FROM pg_available_extensions WHERE name = 'pg_cron';
+
+b. If not available, install from package:
+   i. On Debian/Ubuntu:
+         sudo apt install postgresql-<version>-cron
+
+   ii. On Red Hat/CentOS:
+         sudo yum install pg_cron_<version>
+
+   iii. Or build from source:
+         git clone https://github.com/citusdata/pg_cron.git
+         cd pg_cron
+         make
+         sudo make install
+
+c. Configure shared_preload_libraries in postgresql.conf:
+   shared_preload_libraries = 'pg_cron'
+
+d. Restart PostgreSQL server.
+
+e. Create the extension:
+   CREATE EXTENSION pg_cron;
+
+----------------------------------------------------
+3. pg_stat_kcache
+----------------------------------------------------
+
+a. Install dependencies:
+   sudo apt install postgresql-server-dev-all libsysinfo-dev
+
+b. Clone the source and install:
+   git clone https://github.com/powa-team/pg_stat_kcache.git
+   cd pg_stat_kcache
+   make
+   sudo make install
+
+c. Enable in postgresql.conf:
+   shared_preload_libraries = 'pg_stat_kcache'
+
+d. Restart PostgreSQL.
+
+e. Create the extension:
+   CREATE EXTENSION pg_stat_kcache;
+
+----------------------------------------------------
+4. plpython3u
+----------------------------------------------------
+
+a. Install Python and PostgreSQL PL/Python packages:
+   On Ubuntu/Debian:
+      sudo apt install postgresql-plpython3-<version>
+
+   On Red Hat/CentOS:
+      sudo yum install postgresql<version>-plpython3
+
+b. Create the extension:
+   CREATE EXTENSION plpython3u;
+
+----------------------------------------------------
+5. set_user
+----------------------------------------------------
+
+a. Clone the source:
+   git clone https://github.com/pgaudit/set_user.git
+   cd set_user
+
+b. Build and install:
+   make
+   sudo make install
+
+c. Enable in postgresql.conf:
+   shared_preload_libraries = 'set_user'
+
+d. Restart PostgreSQL.
+
+e. Create the extension:
+   CREATE EXTENSION set_user;
+
+----------------------------------------------------
+
+Note:
+- Replace `<version>` with your actual PostgreSQL version.
+- After modifying postgresql.conf, always restart PostgreSQL.
+- Some extensions require superuser privileges.
