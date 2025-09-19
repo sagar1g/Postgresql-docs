@@ -1,0 +1,47 @@
+***************************Minor version upgreade and Data Directory had old version*********************************************************
+
+Step 1. Take the backup of PostgreSQL cluster
+
+/usr/lib/postgresql14/bin/pg_basebackup -U postgres -h 10.83.36.20 -w -p 5432 -D /db_backup/BaseBkp`date +%d%m%Y-%H:%M:%S` -Ft -z -P -R --checkpoint=fast  
+>> /tmp/base-`date +%d%m%Y`.log 2>>/tmp/base-`date +%d%m%Y`.log
+
+Step 2. Check the current PostgreSQL version
+select version();
+
+Step 3. Check for the latest available version
+ yum check-update postgresql14*  -----Done
+ yum list postgresql14*
+ 
+Step 4. Stop the PostgreSQL cluster
+systemctl stop postgresql-14.service
+
+Step 5. Run yum update to update new binaries:
+yum update  postgresql14*
+
+Step 6. Start PostgreSQL Cluster and check Version
+systemctl start postgresql-14.service
+
+su - postgres
+
+**********We follow above step when we try to start postgresql service, we face error like DATA DIRECTORY HAS OLD VERSION TO slove this error we initailsed 
+new data directory. To create new data directory we use below command.
+
+step 7:- 
+initdb -D /path/to/new/data/directory
+
+stpe 8 :- to upgarade data directory.
+pg_upgrade -b /usr/pgsql-12/bin -B /usr/pgsql-14/bin -d /var/lib/pgsql/12/data -D /var/lib/pgsql/14/data  -c
+
+-b = old bin path
+-B = new bin path
+-d = old data directory
+-D = new data directory
+-c = check
+
+after sucessfully check we use bleow command
+pg_upgrade -b /usr/pgsql-12/bin -B /usr/pgsql-14/bin -d /var/lib/pgsql/12/data -D /var/lib/pgsql/14/data
+
+
+step 9:- 
+
+we move  postgresql.conf and pg_hba.conf file form old directory to new data directory. Because it doestnot copy inside content in new directory.

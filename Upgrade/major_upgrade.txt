@@ -1,0 +1,34 @@
+First we have to base backup on server
+
+
+
+step01:- sudo yum install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+
+step02:- sudo yum install -y postgresql15-server
+
+step03:- /usr/pgsql-15/bin/initdb -D /AumShantii/pgdatabase/data_15
+
+step04:- /usr/pgsql-15/bin/pg_ctl -D /var/lib/pgsql/14/data -l logfile start
+
+step05:- /usr/pgsql-15/bin/pg_upgrade -d  /Aumshanti/pgdatabase/data -D /AumShanti/pgdatabase/data_15 -b /usr/pgsql-11/bin -B /usr/pgsql-15/bin  -c
+
+if password set on postgres we have change to trust 
+
+
+you need to shutdown  the existing cluster before the starting upgrade, otherwise below error.
+
+step06:- systemctl stop postgresql-11.service
+
+step07:- /usr/pgsql-15/bin/pg_upgrade -d  /Aumshanti/pgdatabase/data -D /AumShanti/pgdatabase/data_15-b /usr/pgsql-11/bin -B /usr/pgsql-15/bin --link
+
+step 08:- start new database service
+
+systemctl start postgresql-15.service
+
+ pg_basebackup -D /AumShanti/pgdatabase/data_15 -h 192.168.210.69 -p 5432 -Xs -R -P
+
+
+ echo "localhost:5432:*:postgres:your_password" > ~/.pgpass
+ 
+ 
+ chmod 0600  ~/.pgpass

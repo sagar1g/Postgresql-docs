@@ -1,0 +1,47 @@
+ 1095  2024-02-18 02:37:44 wget https://ftp.postgresql.org/pub/source/v14.11/postgresql-14.11.tar.gz
+ 1096  2024-02-18 02:37:50 ll
+ 1097  2024-02-18 02:38:07 tar -xvf postgresql-14.11.tar.gz
+ 1098  2024-02-18 02:38:16 ll
+ 1099  2024-02-18 02:38:28 cd postgresql-14.11/
+ 1100  2024-02-18 02:38:30 ll
+ 1101  2024-02-18 02:39:36 ./configure --prefix=/usr/lib/postgresql14.11
+ 1102  2024-02-18 02:40:08 ./configure --prefix=/usr/lib/postgresql14.11
+ 1103  2024-02-18 02:40:29 zypper install gcc*
+ 1104  2024-02-18 02:42:55 df -h
+ 1105  2024-02-18 02:43:11 zypper install readline*
+ 1106  2024-02-18 02:43:35 zypper install zlib* -y
+ 1107  2024-02-18 02:43:51 ll
+ 1108  2024-02-18 02:43:59 ./configure --prefix=/usr/lib/postgresql14.11
+ 1109  2024-02-18 02:44:46 make
+ 1110  2024-02-18 02:44:56 zypper install make
+ 1111  2024-02-18 02:45:16 make
+ 1112  2024-02-18 02:50:31 make install
+ 1113  2024-02-18 02:50:45 ll
+ 1114  2024-02-18 02:50:47 cd ..
+ 1115  2024-02-18 02:50:57 cd -
+ 1116  2024-02-18 02:51:00 ll
+ 1117  2024-02-18 02:51:05 cd contrib/
+ 1118  2024-02-18 02:51:09 make
+ 1119  2024-02-18 02:51:59 make install
+ 1120  2024-02-18 02:52:06 ll
+ 1121  2024-02-18 02:52:27 cd /etc/systemd/system/
+ 1122  2024-02-18 02:52:32 ls -lrth
+ 1123  2024-02-18 02:52:57 systemctl status postgresql-14.service
+ 1124  2024-02-18 02:53:14 vi /usr/lib/systemd/system/postgresql-14.service
+ 1125  2024-02-18 02:53:58 cd /usr/share/postgresql
+ 1126  2024-02-18 02:53:59 ll
+ 1127  2024-02-18 02:54:09 less postgresql-script
+ 1128  2024-02-18 02:54:34 cat  postgresql-script
+ 1129  2024-02-18 02:54:49 vi  postgresql-script
+ 1130  2024-02-18 02:56:46 systemctl start postgresql-14.service
+ 1131  2024-02-18 02:57:10 journalctl -xeu postgresql-14.service
+ 1132  2024-02-18 02:57:28 ll
+ 1133  2024-02-18 02:57:32 vi  postgresql-script
+ 1134  2024-02-18 02:58:09 systemctl start postgresql-14.service
+ 1135  2024-02-18 03:01:32 cd /run/postgresql
+ 1136  2024-02-18 03:01:34 ll
+ 1137  2024-02-18 03:02:39 vi /etc/systemd/system/postgresql-14.11.service
+ 1138  2024-02-18 03:03:04 systemctl daemon-reload
+ 1139  2024-02-18 03:03:48 systemctl enable /etc/systemd/system/postgresql-14.11.service
+ 1140  2024-02-18 03:04:04 systemctl start postgresql-14.11.service
+ 1141  2024-02-18 03:04:11 systemctl status  postgresql-14.11.service
