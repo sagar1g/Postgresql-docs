@@ -1,0 +1,32 @@
+
+Installation:- 
+
+
+Step01:- 
+
+cd /data/postgresql-15/postgresql-15.7/contrib/
+
+Step 02:- 
+
+git clone https://github.com/pgpartman/pg_partman.git
+ 
+git clone https://github.com/citusdata/pg_cron.git
+
+Step03:- 
+
+make && make install
+
+
+#-----------------------------------------------------------------------------
+#PG_CRON
+#-----------------------------------------------------------------------------
+cron.timezone='Asia/Kolkata'
+#cron.log_statement = 'all'
+#cron.database_name = 'postgres'
+#------------------------------------------------------------------------------
+# LOCK MANAGEMENT
+#------------------------------------------------------------------------------
+
+
+
+CREATE EXTENSION pg_partman WITH SCHEMA partman;
