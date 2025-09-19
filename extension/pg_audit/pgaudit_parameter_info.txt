@@ -1,0 +1,39 @@
+pgaduit parameter:- 
+
+
+pgaudit.log:- 
+
+Specifies which classes of statements will be logged by session audit logging. Possible values are:
+
+READ: SELECT and COPY when the source is a relation or a query.
+
+WRITE: INSERT, UPDATE, DELETE, TRUNCATE, and COPY when the destination is a relation.
+
+FUNCTION: Function calls and DO blocks.
+
+ROLE: Statements related to roles and privileges: GRANT, REVOKE, CREATE/ALTER/DROP ROLE.
+
+DDL: All DDL that is not included in the ROLE class.
+
+MISC: Miscellaneous commands, e.g. DISCARD, FETCH, CHECKPOINT, VACUUM, SET.
+
+MISC_SET: Miscellaneous SET commands, e.g. SET ROLE.
+
+ALL: Include all of the above.
+
+================================================================================================================
+
+
+pgaudit.log_level
+Specifies the log level that will be used for log entries (see Message Severity Levels for valid levels) but note that ERROR, FATAL, and PANIC are not allowed). This setting is used for regression testing and may also be useful to end users for testing or other purposes.
+
+Note that pgaudit.log_level is only enabled when pgaudit.log_client is on; otherwise the default will be used.
+
+The default is log.
+
+======================================================================================================================================================
+
+pgaudit.log_parameter
+Specifies that audit logging should include the parameters that were passed with the statement. When parameters are present they will be included in CSV format after the statement text.
+
+The default is off.

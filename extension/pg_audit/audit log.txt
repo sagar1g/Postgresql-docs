@@ -1,0 +1,67 @@
+
+
+To enable audit logging with a retention period in PostgreSQL, you can follow these steps:
+
+Enable Audit Logging:
+
+Open your PostgreSQL configuration file (postgresql.conf) and set the following parameters:
+
+logging_collector = on
+
+log_statement = 'all'
+---------log_statement = 'all'                   # none, ddl, mod, all
+log_directory = '/var/log/postgresql/'
+
+log_filename = 'postgresql.log'
+
+Install pgAudit Extension:
+
+The pgAudit extension provides advanced auditing capabilities. You can install it using pgaudit extension or through a package manager if available for your platform.
+
+shared_preload_libraries = 'pgaudit'    # (change requires restart)
+
+Configure pgAudit:
+
+Modify your postgresql.conf or pg_hba.conf file to specify which actions you want to audit and the level of detail. For example:
+
+pgaudit.log = 'ddl, role'
+
+pgaudit.log_parameter = 'role'
+
+Set Retention Period:
+
+PostgreSQL itself doesn't automatically manage log retention. You need to set up a separate process to manage log rotation and retention.
+ You can use tools like logrotate to periodically rotate and manage your log files, keeping only the desired retention.
+
+ 
+Implement Log Rotation:
+
+Configure log rotation in your logrotate configuration to compress, rotate, and delete old log files based on your desired retention period.
+ An example logrotate configuration might look like:
+
+
+
+/var/log/postgresql/*.log {
+
+    daily
+
+    rotate 7
+
+    compress
+
+    delaycompress
+
+    missingok
+
+    notifempty
+
+}
+
+Restart PostgreSQL:
+
+After making changes to your configuration, restart the PostgreSQL server for the changes to take effect.
+
+ 
+
+Remember that auditing and logging can have significant performance impacts, so carefully consider what actions you want to audit and the level of detail you need.
+ Always make sure to secure the log files and the systems they are stored on to protect sensitive information.
