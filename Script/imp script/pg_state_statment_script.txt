@@ -1,0 +1,67 @@
+#!/bin/bash
+
+HOST=10.12.0.11
+PORT=54032
+USERNAME=sa_ecgc1
+DATABASE=postgres
+PASSWORD='Prodsup3R7&@45'
+
+output_dir="/home/shell_script/activity_report_production"
+#log_file="$output_dir/activity_shell_script.log"
+log_file="$output_dir/pg_locks_script.log"
+#output_file="$output_dir/log/pg_stat_activity_$(date +%Y%m%d).csv"
+output_file="$output_dir/log/pg_locks_$(date +%Y%m%d).csv"
+
+pg_locks="SELECT bl.pid AS blocked_pid, a.usename AS blocked_user, kl.pid AS blocking_pid, ka.usename AS blocking_user, a.query AS blocked_statement FROM pg_catalog.pg_locks bl JOIN pg_catalog.pg_stat_activity a ON bl.pid = a.pid JOIN pg_catalog.pg_locks kl JOIN pg_catalog.pg_stat_activity ka ON kl.pid = ka.pid ON bl.transactionid = kl.transactionid AND bl.pid != kl.pid WHERE NOT bl.granted;"
+
+
+#activity_query="insert into public.daily_pg_stat_activity_log (select NOW() - query_start AS duration, datid, datname, pid, leader_pid, usesysid, usename, application_name, client_addr, client_hostname, client_port, backend_start, xact_start, query_start, state_change, wait_event_type, wait_event, state, backend_xid, backend_xmin, query, backend_type, now() from pg_stat_activity WHERE (now() - pg_stat_activity.query_start) > interval '3 seconds' AND state = 'active' AND usename NOT IN ('replicator', 'sa_ecgc', 'sa_ecgc1', 'sa_ecgc2') ORDER BY 1 DESC);"
+
+temp_file=temp_file.csv
+touch $temp_file
+
+# Set the output file path with today's date
+
+export PGPASSWORD=$PASSWORD
+
+# Execute the query and check if there's any output (without headers)
+
+#/usr/pgsql-13/bin/psql -h $HOST -p $PORT -U $USERNAME -d $DATABASE  -t --csv -c "SELECT TO_CHAR(NOW() - query_start,'HH24 \"H,\" MI \"min,\" SS \"sec\"') AS duration, * FROM pg_stat_activity WHERE (now() - pg_stat_activity.query_start) > interval '3 seconds' AND state = 'active' AND usename NOT IN ('replicator', 'sa_ecgc', 'sa_ecgc1', 'sa_ecgc2') ORDER BY 1 DESC" > $temp_file
+
+/usr/pgsql-13/bin/psql -h $HOST -p $PORT -U $USERNAME -d $DATABASE  -t --csv -c "$pg_locks" > $temp_file
+
+
+# Check if the command was successful and the file is not empty
+
+if [ $? -eq 0 ] && [ -s "$temp_file" ]; then
+    cat "${temp_file}" >> "${output_file}"
+echo "$(date +%Y%m%d-%H%M)  Data has been inserted in $output_file" >> "$log_file"
+
+: <<"comment"
+    /usr/pgsql-13/bin/psql -h $HOST -p $PORT -U $USERNAME -d $DATABASE  -c "$activity_query"
+    sleep 5
+    activity_bkp_file="$output_dir/stat_tables_backup/pg_stat_activity_table.sql"
+    TABLE="public.daily_pg_stat_activity_log"
+       if ! /usr/pgsql-13/bin/pg_dump -h $HOST -p $PORT -U $USERNAME -d $DATABASE -t $TABLE -Fc -a -x -O -v -f "$activity_bkp_file" 2>> "$log_file"; then
+               echo "Backup is not successful " >> "$log_file"
+       else
+               echo "Backup is successful"  >> "$log_file"
+        sleep 5
+        M_HOST=10.12.0.18
+        M_PORT=5432
+        M_USERNAME=sa_ecgc
+        M_DATABASE=smile_stats
+        M_PASSWORD='Migsup8R!0dcDa'
+        export PGPASSWORD="$M_PASSWORD"
+truncate_table_query="TRUNCATE TABLE public.pg_stat_activities;"
+        /usr/pgsql-13/bin/psql -h $M_HOST -p $M_PORT -U $M_USERNAME -d $M_DATABASE -c "$truncate_table_query"
+                if ! /usr/pgsql-13/bin/pg_restore -h $M_HOST -p $M_PORT -U $M_USERNAME -d $M_DATABASE -Fc -x -O -v < "$activity_bkp_file" 2>> "$log_file";then
+                echo "Failed to restore table $TABLE";  >> "$log_file"
+                else
+                echo "Successfully retored data for $TABLE";  >> "$log_file"
+                fi
+        fi
+comment
+fi
+
+rm -f $temp_file

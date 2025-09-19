@@ -1,0 +1,46 @@
+#Record start_time
+PGUSER="smile_backup_adm"
+PGBIN="/usr/pgsql-13/bin"
+
+thedate=`date --date="today" +%Y%m%d_%H%M`
+themonth=`date --date="today" +%Y%m`
+# clear the contents from file
+
+BACKUPDIR="/home/postgres_backup"
+>/home/shell_script/postgres_log/reporting_postgres_errordb.txt
+>/home/shell_script/postgres_log/reporting_postgres_successdb.txt
+ERROR="/home/shell_script/postgres_log/reporting_postgres_errordb.txt"
+SUCCESS="/home/shell_script/postgres_log/reporting_postgres_successdb.txt"
+PGHOST_1="10.12.0.16"
+PGPORT_1="54032"
+db="ecgc_reporting_db"
+schema="reporting"
+dir_prefix="smile_service_reporting_db"
+dir_suffix="$(date +%Y_%m_%d)"
+dailydirname="$dir_prefix"_"$dir_suffix"
+FINAL_DEST="$BACKUPDIR/$dailydirname"
+
+if [ ! -d "$FINAL_DEST" ]; then
+        mkdir "$FINAL_DEST"
+fi
+:<< 'comment'
+if ! PGPASSWORD='prod#24ecGc$sba' "$PGBIN/pg_dump" -U "$PGUSER" -h "$PGHOST_1" -p "$PGPORT_1" -d "$db" -n "$schema" -Fc -v > "$BACKUPDIR/$thedate-$db.sql" 2>> "$ERROR"; then
+        echo "$thedate - [!!ERROR!!] Failed to backup for $db database on $PGHOST_1 server" >> "$ERROR"
+    else
+        backups+=("$BACKUPDIR/$db-$thedate.sql")
+        echo "$thedate - Database backup successful for $db on $PGHOST_1 server" >> "$SUCCESS"
+    fi
+comment
+if ! PGPASSWORD='prod#24ecGc$sba' "$PGBIN/pg_dump" -U "$PGUSER" -h "$PGHOST_1" -p "$PGPORT_1" -d "$db" -n "$schema" -Fc > "$FINAL_DEST/$thedate-$db.sql" 2>> "$ERROR"; then
+        echo "$thedate - [!!ERROR!!] Failed to backup for $db database on $PGHOST_1 server" >> "$ERROR"
+    else
+        backups+=("$FINAL_DEST/$db-$thedate.sql")
+        echo "$thedate - Database backup successful for $db on $PGHOST_1 server" >> "$SUCCESS"
+        find "$BACKUPDIR"/ -type d -name "$dir_prefix"* -mindepth 1 -maxdepth 1 -mtime +3 -exec rm -rv {} + >> /home/shell_script/postgres_backup_removed.log 2>&1
+
+
+
+    fi
+endtime=`date --date="today" +%Y%m%d_%H%M`
+echo "Start time of backup is : $thedate" >> "${SUCCESS}"
+echo "end time of backup is : $endtime" >> "${SUCCESS}"

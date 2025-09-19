@@ -1,0 +1,142 @@
+[postgres@MDCSTGSDDBS20 ~]$ crontab -l
+15 0 * * * /home/pgsql/prod-to-pre_prod.sh > /home/pgsql/cron_prod-to-pre_prod.log 2>&1
+[postgres@MDCSTGSDDBS20 ~]$ cat /home/pgsql/prod-to-pre_prod.sh
+
+
+
+#!/bin/bash
+>/home/pgsql/backup.txt
+>/home/pgsql/restoration.txt
+>/home/pgsql/time_parallel_to_dev.txt
+backup_status="/home/pgsql/backup.txt"
+restoration_status="/home/pgsql/restoration.txt"
+time_taken="/home/pgsql/time_parallel_to_dev.txt"
+# Variables for SOURCE PostgreSQL connection
+SOURCE_PGHOST="10.12.0.12"
+SOURCE_PGPORT="54032"
+SOURCE_PGUSER="smile_backup_adm"
+SOURCE_PGPASSWORD='prod#24ecGc$sba'
+
+
+# Variables for SOURCE PostgreSQL connection
+TARGET_PGHOST="172.16.34.25"
+TARGET_PGPORT="5432"
+TARGET_PGUSER="sa_ecgc"
+TARGET_PGPASSWORD="l3ss!mp"
+
+
+##saving datetime fixed format
+date_time=`date "+%d_%m_%Y_%H_%M_%S"`
+suffix=.sql
+
+echo "start time: $date_time" >> "$time_taken"
+#check if folder is provided or not
+if [ ! -d "/home/pgsql/backup/log" ]
+then
+        mkdir -p /home/pgsql/backup/log
+        echo "dir check" >> "$time_taken"
+fi
+
+PGPASSWORD=$TARGET_PGPASSWORD psql -U sa_ecgc -h 172.16.34.25 -p 5432 -d postgres -c "set log_statement=none;"
+PGPASSWORD=$TARGET_PGPASSWORD psql -U sa_ecgc -h 172.16.34.25 -p 5432 -d postgres -c "show log_statement;" >> "$restoration_status"
+
+# Export the password so that psql can use it without prompting
+export PGPASSWORD=$SOURCE_PGPASSWORD
+
+# Retrieve the list of databases
+databases=$(psql -h $SOURCE_PGHOST -p $SOURCE_PGPORT -U $SOURCE_PGUSER -d postgres -t -c "SELECT datname FROM pg_database WHERE datistemplate = false and datname not in ('postgres','biz_iam_db','sys_iam_db') order by 1;" 2>/dev/null)
+
+# Check if psql command was successful
+if [ $? -ne 0 ]; then
+        echo "Failed to connect to the PostgreSQL server or execute the command."
+    echo "Failed to connect to the PostgreSQL server or execute the command." >> "$backup_status"
+    unset PGPASSWORD
+    exit 1
+fi
+
+unset PGPASSWORD
+
+# Convert the list of databases into an array
+#IFS=$'\n' read -rd '' -a db_array <<< "$databases"
+# Convert the list of databases into an array, trimming whitespace
+IFS=$'\n' read -rd '' -a db_array <<< "$(echo "$databases" | sed 's/^[ \t]*//;s/[ \t]*$//')"
+
+
+# Check if the array is empty
+if [ ${#db_array[@]} -eq 0 ]; then
+        echo "No databases found or failed to retrieve database names."
+    echo "No databases found or failed to retrieve database names." >> "$time_taken"
+    exit 1
+else
+    # Echo the database names
+    #echo "Databases:"
+    for db in "${db_array[@]}"; do
+        backupFileName="${db}_${date_time}_only_data${suffix}"
+
+        backup_log=${db}_backup_log.txt
+        restore_log=${db}_restore_log.txt
+
+        echo "$backupFileName"
+        echo "$db"
+
+        export PGPASSWORD=$SOURCE_PGPASSWORD
+        #### schema backup from qa environment
+        if pg_dump --file "/home/pgsql/backup/$backupFileName" --host $SOURCE_PGHOST --port $SOURCE_PGPORT --username $SOURCE_PGUSER --verbose --format=c --blobs --data-only --no-owner --no-privileges --no-tablespaces -d ${db} > "/home/pgsql/backup/log/$backup_log" 2>&1
+        then
+            echo  ${db} data backup taken successfully
+            echo  ${db} data backup taken successfully >> "$backup_status"
+
+            #unset password and set new password for target database
+            unset PGPASSWORD
+            export PGPASSWORD=$TARGET_PGPASSWORD
+
+            ###truncate all data inside
+
+            psql -h $TARGET_PGHOST -p $TARGET_PGPORT -U $TARGET_PGUSER -d ${db} << psql_commands
+            DO \$\$
+            DECLARE
+            row record;
+            BEGIN
+            FOR row in SELECT table_schema,table_name FROM information_schema.tables WHERE table_schema NOT IN ('information_schema', 'pg_catalog') AND table_schema NOT LIKE 'pg_toast%' AND table_schema NOT LIKE 'pg_temp%' AND table_type = 'BASE TABLE'
+            LOOP
+                EXECUTE 'TRUNCATE TABLE ' || quote_ident(row.table_schema) || '.' || quote_ident(row.table_name) || ' CASCADE;';
+            END LOOP;
+            END \$\$;
+
+psql_commands
+sleep 10
+
+            #### restoring schema backup into migration testing environmet
+            if pg_restore --host $TARGET_PGHOST --port $TARGET_PGPORT --username $TARGET_PGUSER --dbname ${db} --verbose --no-owner --no-privileges --no-tablespaces --disable-triggers --data-only < "/home/pgsql/backup/$backupFileName" > "/home/pgsql/backup/log/$restore_log" 2>&1
+            then
+                echo `date "+%d_%m_%Y"` data restoration ${db} restored successfully
+                echo `date "+%d_%m_%Y"` data restoration ${db} restored successfully >> "$restoration_status"
+            else
+                echo data restoration of schema ${db} failed
+                echo data restoration of schema ${db} failed >> "$restoration_status"
+            fi
+        else
+            echo data backup of schema ${db} failed
+            echo data backup of schema ${db} failed >> "$backup_status"
+        fi
+
+
+    done
+fi
+
+truncate_query="Truncate table emp_epms.ecgc_hrd_pms_emp_kra_targets_trn_hist , emp_epms.ecgc_hrd_pms_emp_self_assesment_hst , emp_epms.ecgc_hrd_pms_emp_leave_trn , emp_epms.ecgc_hrd_pms_dept_trn , emp_epms.ecgc_hrd_pms_emp_kra_targets_trn , emp_epms.ecgc_hrd_pms_emp_secured_score_trn , emp_epms.ecgc_hrd_pms_confidential_hst , emp_epms.ecgc_grade_mst_hist , emp_epms.ecgc_hrd_pms_slab_mst_hist , emp_epms.ecgc_weightage_mst_hist , emp_epms.ecgc_hrd_pms_emp_trn_hist , emp_epms.ecgc_hrd_pms_emp_dept_trn , emp_epms.ecgc_hrd_pms_kra_trn , emp_epms.ecgc_hrd_pms_emp_leave_trn_hist , emp_epms.ecgc_hrd_pms_approver_trn , emp_epms.ecgc_hrd_pms_emp_self_assesment_trn , emp_epms.ecgc_hrd_pms_approver_trn_hst , emp_epms.ecgc_hrd_pms_emp_training_trn , emp_epms.ecgc_hrd_pms_officers_remarks_hst , emp_epms.ecgc_hrd_pms_confidential_trn , emp_epms.ecgc_hrd_pms_kra_trn_hst , emp_epms.ecgc_hrd_pms_emp_trn , emp_epms.ecgc_hrd_pms_officers_remarks_trn , emp_epms.ecgc_hrd_pms_mail_mst , emp_epms.ecgc_hrd_pms_sub_pmtr_trn_hist , emp_epms.ecgc_hrd_pms_pmtr_mst_hist , emp_epms.ecgc_hrd_pms_sub_pmtr_mst_hist , emp_epms.ecgc_hrd_pms_sub_pmtr_trn , emp_epms.ecgc_hrd_pms_traitwise_final_score_trn , emp_epms.ecgc_hrd_validity_mst , emp_epms.ecgc_hrd_validity_mst_hist;"
+base_query="update base.ecgc_biz_base_user_password set password='\$2y\$10\$B.5rRPPYnMQRZ9w6C.D0vOYNFjEMPguvwvJco7U0LfYoPZ.EBEBdC';"
+rbac_query="update rbac.ecgc_sys_rbac_user_password set password='\$2y\$10\$B.5rRPPYnMQRZ9w6C.D0vOYNFjEMPguvwvJco7U0LfYoPZ.EBEBdC';"
+PGPASSWORD=$TARGET_PGPASSWORD psql --host $TARGET_PGHOST --port $TARGET_PGPORT --username $TARGET_PGUSER --dbname hrd_emp_epms_db -c "$truncate_query" >>"$restoration_status"
+PGPASSWORD=$TARGET_PGPASSWORD psql --host $TARGET_PGHOST --port $TARGET_PGPORT --username $TARGET_PGUSER --dbname sys_rbac_db -c "$rbac_query" >> "$restoration_status"
+PGPASSWORD=$TARGET_PGPASSWORD psql --host $TARGET_PGHOST --port $TARGET_PGPORT --username $TARGET_PGUSER --dbname biz_base_db -c "$base_query" >> "$restoration_status"
+
+
+PGPASSWORD=$TARGET_PGPASSWORD psql -U sa_ecgc -h 172.16.34.25 -p 5432 -d postgres -c "set log_statement=mod;"
+PGPASSWORD=$TARGET_PGPASSWORD psql -U sa_ecgc -h 172.16.34.25 -p 5432 -d postgres -c "show log_statement;" >> "$restoration_status"
+
+end_time=`date "+%d_%m_%Y_%H_%M_%S"`
+echo "end time: $end_time" >> "$time_taken"
+# Unset the password variable for security
+find /home/pgsql/backup/ -type f -mtime +1 -exec rm -fv {} \; >/home/pgsql/deletedfiles.txt
+unset PGPASSWORD

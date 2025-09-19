@@ -1,0 +1,11 @@
+0 0 * * * /home/shell_script/10.12.0.11_smile_postgres_dailybackup.sh > /home/shell_script/cron_job_logs/postgres_primary_cron.log 2>&1
+0 4 * * * /home/shell_script/copy_log-files-postgres.sh > /home/shell_script/cron_job_logs/copying_logs_primary_postgres.log 2>&1
+0 3 * * * /home/shell_script/10.12.0.16_reporting_postgres_dailybackup.sh > /home/shell_script/cron_job_logs/reporting_postgres_cron.log 2>&1
+#0 6 * * * /home/shell_script/payroll_view_refresh/refresh_mv.sh > /home/shell_script/cron_job_logs/refresh_view_cron.log 2>&1
+0 5 * * * /home/shell_script/reporting_db_procedure/reporting.sh > /home/shell_script/cron_job_logs/procedure_reporting_cron.log 2>&1
+0 0 * * * /home/shell_script/activity_report_production/pg_stat_statement.sh > /home/shell_script/activity_report_production/statements_report.log 2>&1
+*/10 * * * * /home/shell_script/activity_report_production/pg_query_stat_activity.sh > /home/shell_script/activity_report_production/activity_report.log 2>&1
+0 6 * * * /home/shell_script/zip_log/zip_postgreslogs.sh > /home/shell_script/cron_job_logs/zip_postgreslogs.log 2>&1
+0 1 1 * * /home/shell_script/monthend/copy_monthend_backups.sh > /home/shell_script/monthend/cron_monthend.log 2>&1
+*/30 * * * * /home/shell_script/terminate_idle_connection/terminate_idle_conn_in_reporting.sh >> /home/shell_script/terminate_idle_connection/idle_conn_terminate_reporting.log 2>&1
+[postgres@MDCPRODDBPOS3029 ~]$ cat /home/shell_script/zip_log/zip_postgreslogs.sh

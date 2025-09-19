@@ -1,0 +1,87 @@
+#### GLOBAL PARAMETERS ####
+#Record start_time
+PGUSER="smile_backup_adm"
+user_pwd='prod#24ecGc$sba'
+PGBIN="/usr/pgsql-13/bin"
+
+thedate=`date --date="today" +%Y%m%d_%H%M`
+themonth=`date --date="today" +%Y%m`
+today=$(date --date="today" +%Y-%m-%d)
+TARGET_DIR="/home/postgres_backup/postgres_primary_${today}"
+# clear the contents from file
+
+BACKUPDIR="/home/postgres_backup"
+
+dir_prefix="smile_service_db"
+dir_suffix="$(date +%Y_%m_%d)"
+dailydirname="$dir_prefix"_"$dir_suffix"
+FINAL_DEST="$BACKUPDIR/$dailydirname"
+
+if [ ! -d "$FINAL_DEST" ]; then
+        mkdir "$FINAL_DEST"
+fi
+
+
+#>/home/shell_script/postgres_log/errordb_postgres_primary.txt
+#>/home/shell_script/postgres_log/successdb_postgres_primary.txt
+ERROR="/home/shell_script/postgres_log/errordb_postgres_primary.txt"
+SUCCESS="/home/shell_script/postgres_log/successdb_postgres_primary.txt"
+PGHOST_1="10.12.0.11"
+PGPORT_1="54032"
+
+# Fetch database names, neglecting default databases
+
+if dbs=$(PGPASSWORD="$user_pwd" psql -U "$PGUSER" -h "$PGHOST_1" -p "$PGPORT_1" -d postgres -t -c "SELECT datname FROM pg_database WHERE datname NOT IN ('template0', 'template1','may24_dump') order by datname;"); then
+    echo "$thedate - Database name retrieval successful." >> "$SUCCESS"
+else
+    echo "$thedate - [!!ERROR!!] Database name retrieval failed." >> "$ERROR"
+    exit 1
+fi
+# Convert the result into an array
+dbs=($dbs)
+
+backups=()
+# Iterate through the database names and backup each one
+for db in "${dbs[@]}"; do
+    # Determine the prefix until the first underscore
+    db_prefix="${db%%_*}"
+: <<'comment'
+    if ! PGPASSWORD="$user_pwd" "$PGBIN/pg_dump" -U "$PGUSER" -h "$PGHOST_1" -p "$PGPORT_1" -Fc > "$BACKUPDIR/$db-$thedate.sql" "$db" 2>> "$ERROR"; then
+        echo "$thedate - [!!ERROR!!] Failed to backup for $db database on $PGHOST_1 server" >> "$ERROR"
+    else
+        backups+=("$FINAL_DEST/$db-$thedate.sql")
+        echo "$thedate - Database backup successful for $db on $PGHOST_1 server" >> "$SUCCESS"
+    fi
+comment
+
+    if ! PGPASSWORD="$user_pwd" "$PGBIN/pg_dump" -U "$PGUSER" -h "$PGHOST_1" -p "$PGPORT_1" -Fc > "$FINAL_DEST/$db-$thedate.sql" "$db" 2>> "$ERROR"; then
+        echo "$thedate - [!!ERROR!!] Failed to backup for $db database on $PGHOST_1 server" >> "$ERROR"
+    else
+        backups+=("$FINAL_DEST/$db-$thedate.sql")
+        echo "$thedate - Database backup successful for $db on $PGHOST_1 server" >> "$SUCCESS"
+    fi
+
+done
+count=$(grep "$(date +%Y%m%d)" "$SUCCESS" | grep "Database backup successful" | wc -l)
+if [ "$count" -eq 76 ]; then
+        find "${BACKUPDIR}/" -mindepth 1 -maxdepth 1 -type d -name "$dir_prefix"* -mtime +2 -print -exec rm -rv {} + >> /home/shell_script/postgres_backup_removed.log 2>&1
+else
+        echo "$thedate - [!!ERROR!!] Failed to backup for $db database on $PGHOST_1 server" >> "$ERROR"
+fi
+: <<'comment'
+#it Move the backup files to their appropriate directories
+for file in "${backups[@]}"; do
+   # Check if the TARGET_DIR EXISTS
+if [ ! -d "$TARGET_DIR" ]; then
+        mkdir "${TARGET_DIR}_${thedate}"
+        mv "$file" "$TARGET_DIR/"
+else
+        mv "$file" "$TARGET_DIR/"
+fi
+done
+#find "$BACKUPDIR" -type f -mtime +2 -exec rm -rv {} \; >> /home/shell_script/postgres_backup_removed.log 2>&1
+comment
+endtime=`date --date="today" +%Y%m%d_%H%M`
+echo "Start time of backup is : $thedate" >> "${SUCCESS}"
+echo "end time of backup is : $endtime" >> "${SUCCESS}"
+unset PGPASSWORD

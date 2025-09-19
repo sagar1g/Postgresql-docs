@@ -1,0 +1,72 @@
+[root@MDCSTGSDDMS21 ~]# crontab -l
+#0 9,17 * * * /home/admin/email.sh
+* * * * * /home/admin/mongoscript.sh > /home/admin/email_inbox.txt
+0 2 * * * /home/shell_scripts/prod_to_pre_prod_mongo.sh > /home/shell_scripts/cron_job_logs/mongodb_primary_cron.log 2>&1
+[root@MDCSTGSDDMS21 ~]# cat /home/shell_scripts/prod_to_pre_prod_mongo.sh
+
+
+
+
+
+#### GLOBAL PARAMETERS ####
+
+thedate=`date --date="today" +%Y-%m-%d_%H%M`
+
+SOURCE_HOST='10.12.0.15'
+SOURCE_PORT='28018'
+SOURCE_DB='dms_db'
+SOURCE_USER='backup_adm'
+SOURCE_PW='prod$24ecGc#backupR'
+SOURCE_AUTH='dms_db'
+
+TARGET_HOST='172.16.34.27'
+TARGET_PORT='27017'
+TARGET_DB='dms_db'
+TARGET_USER='sa_ecgc'
+TARGET_PW='P3rpord$E3#G'
+TARGET_AUTH='admin'
+
+BACKUPDIR="/home/mongo_backup"
+FILE="mongo_${SOURCE_DB}_${thedate}"
+
+# Define paths for log files inside the backup directory
+SUCCESS="${BACKUPDIR}/mongo_success.txt"
+ERROR="${BACKUPDIR}/mongo_error.txt"
+
+# Ensure the backup directory exists
+if [ ! -d "$BACKUPDIR" ]; then
+    mkdir -p "$BACKUPDIR"
+    echo "Backup directory $BACKUPDIR created" >> "$SUCCESS"
+fi
+
+# Clear previous logs
+> "$SUCCESS"
+> "$ERROR"
+
+# Backup process
+if ! mongodump --host "$SOURCE_HOST" --port "$SOURCE_PORT" -u "$SOURCE_USER" -p "$SOURCE_PW" --authenticationDatabase "$SOURCE_AUTH" -d "$SOURCE_DB" -o "${BACKUPDIR}/${FILE}" 2>>"$ERROR"; then
+    rm -rf "${BACKUPDIR}/${FILE}"
+    echo "Failed to take MongoDB backup on date: $thedate" >> "$ERROR"
+else
+    echo "MongoDB backup successfully taken on date: $thedate" >> "$SUCCESS"
+    echo "MongoDB backup successfully taken on date: $thedate"
+        # Restore process
+        if [ -d "${BACKUPDIR}/${FILE}/${SOURCE_DB}" ]; then
+                if ! mongorestore --host "$TARGET_HOST" --port "$TARGET_PORT" -u "$TARGET_USER" -p "$TARGET_PW" --authenticationDatabase "$TARGET_AUTH" --drop -d "$TARGET_DB" "${BACKUPDIR}/${FILE}/${SOURCE_DB}" 2>>"$ERROR"; then
+                        echo "Failed to restore MongoDB on date: $thedate" >> "$ERROR"
+                else
+                        echo "MongoDB restore successfully completed on date: $thedate" >> "$SUCCESS"
+                        echo "MongoDB restore successfully completed on date: $thedate"
+                        # Delete the backup directory if restoration is successful
+                        rm -rf "${BACKUPDIR}/${FILE}"
+                        echo "Backup directory ${BACKUPDIR}/${FILE} deleted after successful restore" >> "$SUCCESS"
+                fi
+        else
+                echo "Backup directory does not exist for restore" >> "$ERROR"
+        fi
+fi
+
+
+
+process_end=`date --date="today" +%Y-%m-%d_%H%M`
+echo "Backup process started at $thedate" >> "$SUCCESS"

@@ -1,0 +1,37 @@
+#!/bin/bash
+
+thedate=`date --date="today" +%Y%m%d_%H%M`
+log_dir="/home/pgsql/13/data/log"
+: <<"comment"
+YESTERDAY_DATE=$(date -d "yesterday" '+%Y-%m-%d')
+log_file="${YESTERDAY_DATE}_*"
+FILENAME="${YESTERDAY_DATE}_log_archive.zip"
+OUTPUT="/home/shell_script_files/zip_${YESTERDAY_DATE}.log"
+echo "ll -h  $FILENAME" > "$OUTPUT"
+zip -mv "${log_dir}"/"${FILENAME}" "${log_dir}"/${FILENAME} > "${OUTPUT}"
+comment
+DAY_BEFORE_YESTERDAY_DATE=$(date -d "5 days ago" '+%Y-%m-%d')
+cd "$log_dir" || { echo "Failed to access log directory."; exit 1; }
+FILES=(${DAY_BEFORE_YESTERDAY_DATE}_*)
+DATE=$(date -d "5 days ago" '+%Y_%m_%d')
+ZIPFILE="$log_dir/${DATE}-log_archive.zip"
+OUTPUT="/home/shell_script_files/zip_${DAY_BEFORE_YESTERDAY_DATE}.log"
+echo "ll -h  $FILENAME2" > "$OUTPUT"
+if [ ${#FILES[@]} -eq 0 ] || [ ! -e "${FILES[0]}" ]; then
+    echo "No log files to zip for date $TODAY." >>  "$OUTPUT"
+    exit 0  # Exit the script if no files are found
+fi
+
+zip -mvj "${ZIPFILE}" "${log_dir}/${FILES[@]}" >> "${OUTPUT}"
+echo "Log files for date $DATE have been zipped into $ZIPFILE."
+
+wait
+
+#find /home/pgsql/13/data/log/ -type f -name '*.zip' -mtime +3 -exec rm -f {}+ >> csv_removed_file.log 2>&1
+#find /home/pgsql/13/data/log/ -type f -name '*.zip' -mtime +20 -exec rm -f {}+ >> csv_removed_file2.log 2>&1
+
+
+endtime=`date --date="today" +%Y%m%d_%H%M`
+echo "Start time of backup is : $thedate" >> "${OUTPUT}"
+echo "end time of backup is : $endtime" >> "${OUTPUT}"
+

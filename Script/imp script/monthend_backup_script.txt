@@ -1,0 +1,39 @@
+#!/bin/bash
+set +x
+suffix=$(date +%Y_%m_%d)
+source_dir="/home/postgres_backup/smile_service_db_$suffix"
+destination_dir="/home/shell_script/monthend/monthend_backup"
+log="$destination_dir/../monthend.log"
+
+date=$(date +%Y%m%d)
+
+host="10.12.0.21"
+port="5432"
+suser="sa_ecgc"
+passw="pw5831"
+conndb="postgres"
+
+olddb="ecgc_$(date -d "4 days ago" +%b)24_db"
+newdb="ecgc_$(date +%b)24_db"
+
+
+cp -R "$source_dir" "$destination_dir"
+if [ $? -eq 0 ]; then
+        echo "$(date +%Y%m%d_%H%M%S) --> Backup files are copied to ${destination_dir} from ${source_dir} where file suffix is smile_service_db_${suffix}" >>$log
+cat $log
+export PGPASSWORD=$passw
+#psql -U "$suser" -h "$host" -d "$db" -p "$port" -c "drop database $olddb"
+#psql -U "$suser" -h "$host" -d "$db" -p "$port" -c "create database $newdb"
+
+#backupfiles=$("${destination_dir}"/*"$filename_suffix")
+#for file in "${backupfiles[@]}"; do
+#echo "Db name : ${file}"
+#done
+fi
+
+
+
+
+
+#find "$destination_dir" -type f -mtime +30 -exec rm {} \; >>$log
+unset PGPASSWORD

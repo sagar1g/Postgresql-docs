@@ -1,0 +1,35 @@
+#### GLOBAL PARAMETERS ####
+
+thedate=`date --date="today" +%Y-%m-%d_%H%M`
+
+HOST1='10.12.0.13'
+HOST2='10.12.0.14'
+HOST3='10.12.0.15'
+PORT='28018'
+DB='dms_db'
+
+USER='backup_adm'
+PW='prod$24ecGc#backupR'
+AUTH='dms_db'
+
+BACKUPDIR="/home/mongo_backup"
+FILE="mongo_${DB}_${thedate}"
+
+>/home/shell_script/mongo_log/mongo_success.txt
+>/home/shell_script/mongo_log/mongo_error.txt
+ERROR="/home/shell_script/mongo_log/mongo_error.txt"
+SUCCESS="/home/shell_script/mongo_log/mongo_success.txt"
+
+if ! mongodump --host "rs-prod-ecgc/$HOST1:$PORT,$HOST2:$PORT,$HOST3:$PORT" -u "$USER" -p "$PW" --authenticationDatabase "$DB" -d "$DB" -o "${BACKUPDIR}/${FILE}" 2>>"$ERROR"; then
+
+        echo "Failed to take Mongo DB backup on date:  $thedate" >> "$ERROR"
+else
+        echo "Mongo DB backup Successfully taken on date:  $thedate" >> "$SUCCESS"
+        find "${BACKUPDIR}/" -mindepth 1 -maxdepth 1 -type d -mtime +1 -exec rm -rv {} + >> "$SUCCESS"
+fi
+
+process_end=`date --date="today" +%Y-%m-%d_%H%M`
+echo "Backup process started at $thedate" >>"$SUCCESS"
+echo "Backup Process ended at $process_end" >> "$SUCCESS"
+
+# Removing Backup Directories older than 3 days of Mongo DB
