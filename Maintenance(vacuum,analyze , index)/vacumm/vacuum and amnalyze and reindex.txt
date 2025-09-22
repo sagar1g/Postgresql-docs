@@ -1,0 +1,37 @@
+1. VACUUM
+
+Think of it as cleaning up garbage.
+
+When you update or delete rows, the old versions don’t get removed immediately (Postgres keeps them for safety).
+
+VACUUM removes these dead rows and frees space so the table doesn’t grow unnecessarily.
+
+👉 Example: Like cleaning unused files from your computer so it doesn’t get slow.
+
+2. ANALYZE
+
+Think of it as collecting statistics.
+
+PostgreSQL needs to know how much data is in each table/column to make smart decisions on how to run queries faster.
+
+ANALYZE updates this info.
+
+👉 Example: Like telling Google Maps the latest traffic conditions so it can choose the fastest route.
+
+3. REINDEX
+
+Think of it as repairing or rebuilding indexes.
+
+Indexes are like a book’s index – they help you find rows quickly.
+
+Over time, indexes can get bloated or corrupted. REINDEX rebuilds them fresh.
+
+👉 Example: Like re-organizing a messy library catalog so you can find books faster.
+
+✅ In short:
+
+VACUUM = clean junk
+
+ANALYZE = update statistics
+
+REINDEX = rebuild indexes for faster search
