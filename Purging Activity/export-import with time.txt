@@ -1,0 +1,44 @@
+select count(*) from "EDMS".dm_audittrail_s where time_stamp between '2023-01-01' and '2023-01-31';
+
+
+copy (select count(*) from "EDMS".dm_audittrail_s where time_stamp between '2023-01-01' and '2023-01-31') to /data/abc.sql
+
+============EXPORT========================
+dm_EDMS_docbase=# copy (select * from "EDMS".dm_audittrail_s where time_stamp between '2023-01-01' and '2023-01-31') to '/data/abc.sql';
+COPY 1726579
+dm_EDMS_docbase=# select count(*) from "EDMS".dm_audittrail_s where time_stamp between '2023-01-01' and '2023-01-31';
+
+  count
+---------
+ 1726579
+(1 row)
+
+dm_EDMS_docbase=# create table "EDMS".test as select * from "EDMS".dm_audittrail_s where 1=2;
+SELECT 0
+
+=================IMPORT===========================
+
+dm_EDMS_docbase=# select count(*) from "EDMS".test;
+ count
+-------
+     0
+(1 row)
+
+dm_EDMS_docbase=# COPY "EDMS".test FROM '/data/abc.sql';
+COPY 1726579
+dm_EDMS_docbase=# select count(*) from "EDMS".test;
+  count
+---------
+ 1726579
+(1 row)
+
+dm_EDMS_docbase=# \dt+ "EDMS".test
+                           List of relations
+ Schema | Name | Type  |  Owner   | Persistence |  Size   | Description
+--------+------+-------+----------+-------------+---------+-------------
+ EDMS   | test | table | postgres | permanent   | 1032 MB |
+(1 row)
+
+
+
+ 

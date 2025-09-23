@@ -1,0 +1,25 @@
+***************************************************************
+copy table:- 
+1.CREATE TABLE new_table AS
+SELECT *
+FROM old_table;
+
+2.CREATE TABLE new_table (LIKE old_table INCLUDING ALL);
+INSERT INTO new_table SELECT * FROM old_table;
+
+3.pg_dump -h your_host -d your_database -U your_user -t old_table -f dump.sql
+psql -h your_host -d your_database -U your_user -f dump.sql
+
+
+How to delete 6 month old data:- 
+DELETE FROM your_table
+WHERE timestamp_column < NOW() - INTERVAL '6 months';
+
+
+DELETE FROM your_table
+WHERE created_at < CURRENT_DATE - INTERVAL '6 months';
+
+
+*********************************************************************************
+
+
