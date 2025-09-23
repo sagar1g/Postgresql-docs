@@ -1,0 +1,97 @@
+### Steps to Fix the Shared Memory Segment Issue in PostgreSQL
+
+#### 1. Check PostgreSQL Status
+Run the following command to check if PostgreSQL is running:
+
+```bash
+systemctl status postgresql
+```
+If it is not running, start it using:
+
+```bash
+systemctl start postgresql
+```
+
+---
+
+#### 2. Check Shared Memory Usage
+PostgreSQL relies on shared memory. Check the current shared memory limits:
+
+```bash
+ipcs -m
+```
+
+If there are insufficient memory segments, increase them by modifying `/etc/sysctl.conf`:
+
+```bash
+echo "kernel.shmmax = 4294967296" >> /etc/sysctl.conf
+echo "kernel.shmall = 1048576" >> /etc/sysctl.conf
+sysctl -p
+```
+
+---
+
+#### 3. Verify HugePages (If Enabled)
+Check if HugePages are enabled:
+
+```bash
+cat /proc/meminfo | grep HugePages
+```
+
+If `HugePages_Total` is **0**, but PostgreSQL is set to use HugePages, adjust the setting in `postgresql.conf`:
+
+```bash
+huge_pages = try
+```
+
+---
+
+#### 4. Check Available Disk Space
+Ensure there's enough space for shared memory and WAL files:
+
+```bash
+df -h
+```
+
+---
+
+#### 5. Check PostgreSQL Logs for Errors
+View recent PostgreSQL logs:
+
+```bash
+journalctl -u postgresql --no-pager | tail -n 50
+```
+or  
+
+```bash
+cat /var/lib/pgsql/15/data/log/postgresql.log | tail -n 50
+```
+
+---
+
+#### 6. Restart PostgreSQL
+If no critical issues are found, restart PostgreSQL:
+
+```bash
+systemctl restart postgresql
+```
+or  
+
+```bash
+pg_ctl restart -D /path/to/data_directory
+```
+
+---
+
+#### 7. Check and Fix Permissions on Shared Memory
+Ensure PostgreSQL has the right permissions on `/dev/shm`:
+
+```bash
+ls -ld /dev/shm
+```
+
+If necessary, set the correct permissions:
+
+```bash
+chmod 1777 /dev/shm
+```

@@ -1,0 +1,83 @@
+If the same query is being blocked by another instance of itself, this suggests a few common causes in PostgreSQL-
+
+The issue arises due to system catalog contention or uncommitted transactions during the creation of temporary tables in PostgreSQL. Here’s a detailed explanation of why this is happening:
+
+1. System Catalog Contention
+When you create a temporary table, PostgreSQL writes metadata into system catalogs (like pg_class, pg_attribute, etc.).
+If multiple sessions attempt to create temporary tables simultaneously, they compete for locks on these system catalogs.
+This can lead to blocking if one session holds a lock and others are waiting to acquire it.
+
+2. Uncommitted Transactions
+If a session creates a temporary table within a transaction and doesn't commit or rollback, it retains locks on system catalogs.
+Other sessions trying to create similar tables are blocked until the initial transaction completes
+.
+3. Locking Behavior of Temporary Tables
+Even though temporary tables are session-specific, their creation still involves global locks on system catalogs.
+Temporary table creation is not lightweight—it can cause blocking if done frequently in parallel sessions.
+
+4. High Concurrency Workloads
+If your application frequently creates temporary tables in high-concurrency environments, it amplifies the risk of such contention.
+This is common in ETL processes, reporting queries, or bulk data processing tasks.
+
+=========================================================================================
+
+1.Shared System Catalog Locking:
+
+Even if temporary table names are different, PostgreSQL still needs to interact with the system catalogs 
+(such as pg_class, pg_namespace, and others) when creating or managing temporary tables. These system catalogs are shared across 
+all sessions, and concurrent modifications to them may cause locking conflicts.
+
+2. Temporary Table Metadata Locking:
+
+Temporary tables are stored in a session-specific schema (usually named pg_temp). 
+If multiple sessions are trying to create temporary tables within this schema at the same time, there may be contention 
+over locks required to update the system catalog.
+
+3.Locking Between Other Concurrent Transactions:
+
+Even if your table names are unique, transactions that interact with the same system catalogs or rows can cause blocking. 
+For example, another transaction might be holding a lock on a related system table, causing delays in your current query.
+
+
+====================================================================================================================
+
+Steps to Resolve:
+
+Check for Pending Transactions:
+
+1.A query can be blocked if there are pending transactions that haven't committed yet. You can check for 
+long-running transactions or uncommitted transactions by running:
+
+SELECT pid, usename, state, query, age(clock_timestamp(), query_start) AS duration
+FROM pg_stat_activity
+WHERE state = 'idle in transaction';
+
+2.Investigate Locking Details:
+
+Identify exactly which locks are being held by each process using:-
+
+SELECT blocking_pid, blocked_pid, blocked_activity, blocking_activity
+FROM pg_locks l
+JOIN pg_stat_activity sa ON l.pid = sa.pid
+WHERE NOT l.granted;
+
+3.Optimize Transaction Management:
+
+Avoid long-running transactions. If a session holds locks for a long time, it can block other sessions attempting 
+to create temporary tables. Ensure that transactions are short-lived and commit them as soon as possible.
+
+4.Set Timeout for Lock Waits:
+
+You can configure a statement timeout to avoid indefinitely waiting for locks. For example:-
+
+SET statement_timeout = '5min';
+
+5.Reduce Concurrent Transactions:
+
+If too many sessions are trying to execute similar operations concurrently, it may lead to lock contention. 
+Reducing the number of concurrent queries that involve temporary table creation could reduce blocking.
+
+6.Temporary Tables in Different Schemas:
+
+If feasible, try creating temporary tables in different schemas 
+(if your use case allows), so that multiple sessions don't compete for the same schema's lock.

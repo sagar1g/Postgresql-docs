@@ -1,0 +1,26 @@
+Reason for "ERROR: canceling statement due to conflict with recovery" 
+The error "canceling statement due to conflict with recovery" occurs when a query running on a PostgreSQL standby server conflicts with the WAL replay process. This is a normal behavior in a Hot Standby setup, where read queries on the standby must not block the WAL application.
+
+Causes of the Error
+Long-running queries on the standby
+If a query on the standby reads data that the primary server has modified, and WAL replay requires access to those rows or indexes, PostgreSQL cancels the query to allow WAL replay to continue.
+Solution:- 
+Enable hot_standby_feedback:- 
+This setting prevents queries on the standby from being canceled due to vacuuming or HOT updates on the primary.
+pro & cons of this parameter as follows:- 
+Pros:-
+Prevents VACUUM from removing old tuples needed by standby queries.
+Reduces query cancellations.
+Cons:-
+Increases bloat on the primary server since VACUUM must retain dead tuples longer.
+May cause table and index bloat, requiring aggressive autovacuum tuning.
+
+2.max_standby_streaming_delay:-
+This allows standby queries to run longer before getting canceled.
+pro & cons of this parameter as follows:- 
+Pros:-
+Ensures standby queries complete before WAL changes overwrite required tuples.
+Useful for historical read replicas.
+cons:- 
+Causes intentional replication lag, making standby outdated.
+Not useful if real-time failover is required.

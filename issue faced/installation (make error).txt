@@ -1,0 +1,22 @@
+Error:- while execute make command this error appear 
+
+
+make -C ./src/backend generated-headers
+make[1]: Entering directory '/postgres/postgresql-17.2/src/backend'
+make -C ../include/catalog generated-headers
+make[2]: Entering directory '/postgres/postgresql-17.2/src/include/catalog'
+'/usr/bin/perl' ../../../src/backend/catalog/genbki.pl --include-path=../../../src/include/ \
+        --set-version=17 ../../../src/include/catalog/pg_proc.h ../../../src/include/catalog/pg_type.h ../../../src/include/catalog/pg_attribute.h ../../../src/include/catalog/pg_class.h ../../../src/include/catalog/pg_attrdef.h ../../../src/include/catalog/pg_constraint.h ../../../src/include/catalog/pg_inherits.h ../../../src/include/catalog/pg_index.h ../../../src/include/catalog/pg_operator.h ../../../src/include/catalog/pg_opfamily.h ../../../src/include/catalog/pg_opclass.h ../../../src/include/catalog/pg_am.h ../../../src/include/catalog/pg_amop.h ../../../src/include/catalog/pg_amproc.h ../../../src/include/catalog/pg_language.h ../../../src/include/catalog/pg_largeobject_metadata.h ../../../src/include/catalog/pg_largeobject.h ../../../src/include/catalog/pg_aggregate.h ../../../src/include/catalog/pg_statistic.h ../../../src/include/catalog/pg_statistic_ext.h ../../../src/include/catalog/pg_statistic_ext_data.h ../../../src/include/catalog/pg_rewrite.h ../../../src/include/catalog/pg_trigger.h ../../../src/include/catalog/pg_event_trigger.h ../../../src/include/catalog/pg_description.h ../../../src/include/catalog/pg_cast.h ../../../src/include/catalog/pg_enum.h ../../../src/include/catalog/pg_namespace.h ../../../src/include/catalog/pg_conversion.h ../../../src/include/catalog/pg_depend.h ../../../src/include/catalog/pg_database.h ../../../src/include/catalog/pg_db_role_setting.h ../../../src/include/catalog/pg_tablespace.h ../../../src/include/catalog/pg_authid.h ../../../src/include/catalog/pg_auth_members.h ../../../src/include/catalog/pg_shdepend.h ../../../src/include/catalog/pg_shdescription.h ../../../src/include/catalog/pg_ts_config.h ../../../src/include/catalog/pg_ts_config_map.h ../../../src/include/catalog/pg_ts_dict.h ../../../src/include/catalog/pg_ts_parser.h ../../../src/include/catalog/pg_ts_template.h ../../../src/include/catalog/pg_extension.h ../../../src/include/catalog/pg_foreign_data_wrapper.h ../../../src/include/catalog/pg_foreign_server.h ../../../src/include/catalog/pg_user_mapping.h ../../../src/include/catalog/pg_foreign_table.h ../../../src/include/catalog/pg_policy.h ../../../src/include/catalog/pg_replication_origin.h ../../../src/include/catalog/pg_default_acl.h ../../../src/include/catalog/pg_init_privs.h ../../../src/include/catalog/pg_seclabel.h ../../../src/include/catalog/pg_shseclabel.h ../../../src/include/catalog/pg_collation.h ../../../src/include/catalog/pg_parameter_acl.h ../../../src/include/catalog/pg_partitioned_table.h ../../../src/include/catalog/pg_range.h ../../../src/include/catalog/pg_transform.h ../../../src/include/catalog/pg_sequence.h ../../../src/include/catalog/pg_publication.h ../../../src/include/catalog/pg_publication_namespace.h ../../../src/include/catalog/pg_publication_rel.h ../../../src/include/catalog/pg_subscription.h ../../../src/include/catalog/pg_subscription_rel.h
+Can't locate FindBin.pm in @INC (you may need to install the FindBin module) (@INC contains: /usr/local/lib64/perl5/5.32 /usr/local/share/perl5/5.32 /usr/lib64/perl5/vendor_perl /usr/share/perl5/vendor_perl /usr/lib64/perl5 /usr/share/perl5) at ../../../src/backend/catalog/genbki.pl line 20.
+BEGIN failed--compilation aborted at ../../../src/backend/catalog/genbki.pl line 20.
+make[2]: *** [Makefile:141: bki-stamp] Error 2
+make[2]: Leaving directory '/postgres/postgresql-17.2/src/include/catalog'
+make[1]: *** [Makefile:121: submake-catalog-headers] Error 2
+make[1]: Leaving directory '/postgres/postgresql-17.2/src/backend'
+make: *** [src/Makefile.global:384: submake-generated-headers] Error 2
+
+
+sol:- 
+
+sudo dnf install perl-FindBin
+

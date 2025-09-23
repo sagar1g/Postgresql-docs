@@ -1,0 +1,123 @@
+1.postgres@mdcxuatdb47:~$ psql
+   psql: error while loading shared libraries: libpq.so.5: cannot open shared object file: No such file or directory
+
+sol:- 
+export PATH=/usr/lib/pgsql-15.6/bin:$PATH
+export PGDATA=/mars_db/postgresql-15.6/data
+export PGPORT=5432
+export PGDATABASE=postgres
+#`export PGHOST=/tmp
+export LD_LIBRARY_PATH=/usr/lib/pgsql-15.6/lib:$LD_LIBRARY_PATH   # 
+
+##########################################################################################################################
+
+2.ssl not configure:-
+
+sol:- 
+openssl req -new -x509 -days 3650 -key server.key -out server.crt -subj
+"/C=ID/CN=192.168.150.200"
+
+
+openssl x509 -req -signkey server.key -out server.crt -days 365
+
+#########################################################################################################################
+
+
+#############################################################################################################################
+4.  WARNING:  database "policy_engine" has a collation version mismatch
+    DETAIL:  The database was created using collation version 2.17, but the operating system provides version 2.28.
+    HINT:  Rebuild all objects in this database that use the default collation and run ALTER DATABASE policy_engine 
+	REFRESH COLLATION VERSION, or build PostgreSQL with the right library version.
+
+solution:- You are now connected to database "policy_engine" as user "postgres".
+           policy_engine=# ALTER DATABASE policy_engine REFRESH COLLATION VERSION;
+           NOTICE:  changing version from 2.17 to 2.28
+            ALTER DATABASE
+
+Note:-  1.A collation version refers to the specific version of these sorting and comparison rules provided 
+by the operating system (OS)  at the time the database was created or modified.
+
+2.The collation version is critical for maintaining consistency in text comparisons and sorting. When the collation rules 
+provided by the OS change,  it's important to update or rebuild database objects that rely on those rules (like indexes).
+
+###############################################################################################################################################
+/usr/lib/pgsql-15.6/bin/psql: error while loading shared libraries: libpq.so.5: cannot open shared object file: No such file or directory
+
+If the libpq.so.5 library exists but isn't found by PostgreSQL tools, you need to tell the system where to look for it:
+tempory changes:- 
+
+export LD_LIBRARY_PATH=/usr/lib/pgsql-15.6/lib:$LD_LIBRARY_PATH
+
+/usr/lib/pgsql-15.6/bin/psql --version
+
+
+make perment chenges:- 
+1.vi .bash_profile
+
+export LD_LIBRARY_PATH=/usr/lib/pgsql-15.6/lib:$LD_LIBRARY_PATH
+
+2. source .bash_profile
+
+=====================================================================================================================================================================
+
+barman error:-
+
+Both root and postgres are using /usr/local/bin/barman, but they are still showing different versions of Barman
+
+
+1.Verify Python Version Used by Barman:-
+
+/usr/local/bin/barman --version
+/usr/local/bin/barman -V
+/usr/local/bin/barman --help | grep Python    ------------> excute on both postgres & barman
+
+
+2.Check the Python Interpreter Used by Barman:-
+
+head -n 1 /usr/local/bin/barman
+
+result:- #!/usr/bin/python3
+
+3.: Identify Python Packages for Barman:- 
+
+/usr/bin/python3 -m pip show barman ------------> excute on both postgres & barman
+
+=======================================================================================================================================================================
+  
+PostgreSQL service did not start through systemctl :- 
+
+sudo setenforce 0
+sudo systemctl restart postgresql-10
+
+if start then used below command:- 
+
+sudo semanage permissive -a postgresql_t
+
+==============================================================================================================================================================
+
+[root@localhost ~]# rpm -ivh postgresql13-devel-13.18-1PGDG.rhel9.x86_64.rpm
+warning: postgresql13-devel-13.18-1PGDG.rhel9.x86_64.rpm: Header V4 RSA/SHA256 Signature, key ID 08b40d20: NOKEY
+error: Failed dependencies:
+        perl(IPC::Run) is needed by postgresql13-devel-13.18-1PGDG.rhel9.x86_64
+
+sol:- 
+
+yum install perl
+ yum install perl-CPAN
+ cpan IPC::Run
+
+======================================================================================================================================================
+
++ /usr/lib/pgsql-15.6/bin/pg_basebackup -U postgres -h /tmp -p 4702 -D /backup/PostgreSQL_Base_Backup_18-02-25-043609 -l Tue Feb 18 04:36:09 IST 2025 -P -Ft -z -R
++ echo -e \nEnd Time: Tue Feb 18 04:36:09 IST 2025
+pg_basebackup: error: connection to server on socket "/tmp/.s.PGSQL.4702" failed: FATAL:  no pg_hba.conf entry for replication connection from host "[local]", user "postgres", no encryption
+
+sol:- 
+
+vi pg_hba.conf
+
+local   replication     all                                     trust
+
+
+
+

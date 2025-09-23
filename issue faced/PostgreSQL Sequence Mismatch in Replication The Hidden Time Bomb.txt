@@ -1,0 +1,51 @@
+🚨 PostgreSQL Sequence Mismatch in Replication: The Hidden Time Bomb🚨 
+
+In high-availability PostgreSQL environments, replication gives you redundancy, but not always consistency — especially when it comes to sequences.
+Recently, while managing a production-grade streaming replication setup, I encountered a subtle yet high-impact issue that many teams overlook:
+
+⚠️ Sequence values on replicas were completely out of sync with the primary.
+At first glance, everything looked perfect — tables were in sync, replication lag was minimal, failover worked as expected. But then, once we promoted a replica, the real trouble began.
+
+🧩 What Are Sequences in PostgreSQL?
+Sequences in PostgreSQL are independent objects used primarily for generating unique values — often for SERIAL or BIGSERIAL columns (e.g., primary keys).
+
+CREATE TABLE users (
+id SERIAL PRIMARY KEY,
+name TEXT
+);
+
+⚠️ The Problem: Sequence Mismatch After Failover
+In a streaming replication setup:
+
+Data changes (INSERT/UPDATE/DELETE) are replicated from the primary to the replica.
+Sequences are NOT WAL-logged, meaning their current values (nextval) are not replicated.
+This causes a drift between primary and secondary sequences — especially in high-insert systems.
+So when you promote a replica (failover), it might start generating duplicate primary key values, leading to:
+
+❌ duplicate key value violates unique constraint
+❌ Failed inserts
+❌ Application errors
+
+🔍 Real Scenario I Faced:
+Primary: inserted millions of records, users_id_seq value = 2,000,000
+Replica: untouched sequence at 1
+Failover occurred. App inserted new record on new primary → id = 1 → Duplicate!
+
+💡 Why It Happens
+PostgreSQL doesn’t replicate nextval() calls or sequence states via WAL. They are handled locally and are not part of base replication.
+
+So even though your data is replicated, your sequence progress is not — unless manually adjusted.
+
+ 🛠️ Solutions
+✅ 1. Use pg_dump with --data-only and --disable-triggers
+
+
+pg_dump -s -t users_id_seq yourdb > sequence.sql
+
+✅ 2. Sync Sequence Manually After Failover and reset Manually all the Sequence
+
+SELECT setval('users_id_seq', (SELECT MAX(id) FROM users) + 1);
+
+🏁 Final Thoughts
+Sequence mismatch is a hidden replication pitfall that can silently break your PostgreSQL setup after a failover.
+By understanding how sequences work — and how they don’t replicate — you can prevent major data integrity issues in a high-availability setup.

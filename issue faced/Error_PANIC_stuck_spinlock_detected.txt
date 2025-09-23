@@ -1,0 +1,71 @@
+ PANIC: stuck spinlock detected:-
+
+
+1.The PANIC: stuck spinlock detected error in PostgreSQL is caused by a spinlock (a low-level locking mechanism used for synchronizing access to shared memory) getting stuck. Spinlocks are designed to be lightweight and fast, but if they fail to release or acquire properly, it leads to a system-wide panic. Below are the most common reasons for this issue:
+
+2.Why PostgreSQL Crashes on PANIC Errors
+i.Consistency Concerns: Spinlocks protect critical data structures in shared memory. If a spinlock gets stuck, it could lead to inconsistent or corrupted shared memory states.
+ii.Automatic Recovery: PostgreSQL opts to crash and restart to ensure the database is brought back to a consistent state using crash recovery.
+
+
+3. first see os log:- 
+
+i.oom kill :- 
+
+dmesg --ctime | grep -i oom -------------------- to see kernal log
+
+ii.start database service :- 
+
+if you unable to stop service :- 
+
+killall -9 'postgres'
+
+then start service
+
+===============================================================================================================================================================\
+
+why these happening:- 
+
+====Why It Happens (Causes):
+1.High Lock Contention: Too many concurrent queries or processes accessing the same resources.
+2.Resource Exhaustion: CPU, memory, or I/O bottlenecks.
+4.Long-Running Transactions: Holding locks for too long causes contention.
+5.Hardware/Kernel Issues: Faulty memory, CPU, or misconfigured kernel parameters.
+6.Extensions or Bugs: Misbehaving PostgreSQL extensions or bugs in the version you're using.
+
+==========What to Check During This Issue:
+1.PostgreSQL Logs:
+
+i.Check for queries causing contention or errors around the crash.
+ii.Look for deadlocks, high lock wait times, or long-running queries.
+
+2.System Resource Usage:
+
+i.Use top or htop to check for high CPU or memory usage.
+ii.Use vmstat or iostat for I/O bottlenecks.
+
+3.Lock Contention:
+SELECT * FROM pg_locks WHERE NOT granted;
+
+4.Kernel Logs:
+
+Check dmesg for memory or hardware-related errors:
+dmesg | grep -i oom
+
+5.Extensions:
+
+Disable third-party extensions temporarily to rule them out.
+
+============Short Fixes to Prevent:
+
+1.Optimize Queries: Tune slow queries and reduce long-running transactions.
+
+2.Tune PostgreSQL:
+
+i.Lower max_connections and use a connection pooler (e.g., pgbouncer).
+ii.Tune shared_buffers, work_mem, and checkpoint_timeout.
+
+3.Upgrade PostgreSQL: Apply the latest patches to fix known bugs.
+Check OS Settings:
+Disable Transparent Huge Pages (THP).
+Optimize kernel parameters (e.g., vm.dirty_ratio, vm.overcommit_memory).
