@@ -1,0 +1,28 @@
+𝗦𝘁𝗼𝗽 𝗚𝗶𝘃𝗶𝗻𝗴 𝗦𝗨𝗣𝗘𝗥𝗨𝗦𝗘𝗥! 
+𝗠𝗲𝗲𝘁 𝗣𝗼𝘀𝘁𝗴𝗿𝗲𝗦𝗤𝗟 𝟭𝟳’𝘀 𝗚𝗮𝗺𝗲-𝗖𝗵𝗮𝗻𝗴𝗶𝗻𝗴 𝗠𝗔𝗜𝗡𝗧𝗔𝗜𝗡 𝗣𝗿𝗶𝘃𝗶𝗹𝗲𝗴𝗲
+
+With PostgreSQL 17, there’s no need to grant full SUPERUSER privileges just for routine maintenance tasks.
+
+You can now delegate key operations like:
+
+ VACUUM
+ ANALYZE
+ REINDEX
+ REFRESH MATERIALIZED VIEW
+ CLUSTER
+ LOCK TABLE
+
+…using the new MAINTAIN privilege.
+
+𝗚𝗿𝗮𝗻𝘁 𝗠𝗔𝗜𝗡𝗧𝗔𝗜𝗡 𝗼𝗻 𝗮 𝘀𝗽𝗲𝗰𝗶𝗳𝗶𝗰 𝘁𝗮𝗯𝗹𝗲:
+GRANT MAINTAIN ON TABLE your_table TO maintenance_user;
+
+𝗡𝗲𝗲𝗱 𝗯𝗿𝗼𝗮𝗱𝗲𝗿 𝗮𝗰𝗰𝗲𝘀𝘀? 𝗔𝘀𝘀𝗶𝗴𝗻 𝘁𝗵𝗲 𝗯𝘂𝗶𝗹𝘁-𝗶𝗻 𝗿𝗼𝗹𝗲:
+GRANT pg_maintain TO maintenance_user;
+
+𝗪𝗵𝘆 𝗶𝘁 𝗺𝗮𝘁𝘁𝗲𝗿𝘀:
+ Improves security by avoiding unnecessary superuser rights
+ Provides precise access control
+ Simplifies maintenance without compromising safety
+
+Keep your PostgreSQL environment optimized with the principle of least privilege in mind.

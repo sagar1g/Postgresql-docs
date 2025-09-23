@@ -1,0 +1,145 @@
+5.Function:- 
+
+
+To change owner of that funaction:- 
+
+
+
+SELECT 'ALTER FUNCTION ' || n.nspname || '.' || p.proname || ' OWNER TO retmeddb;' 
+FROM pg_proc p 
+JOIN pg_namespace n ON p.pronamespace = n.oid 
+WHERE n.nspname IN ('public') 
+AND pg_catalog.pg_get_userbyid(p.proowner) = 'Medical_Retirement'
+ORDER BY n.nspname, p.proname;
+
+
+
+SELECT 'ALTER FUNCTION ' || n.nspname || '.' || p.proname || ' OWNER TO "Medical_Retirement";' 
+FROM pg_proc p 
+JOIN pg_namespace n ON p.pronamespace = n.oid 
+WHERE n.nspname IN ('public') 
+ORDER BY n.nspname, p.proname;
+
+
+
+
+To see all function :-  
+ 
+SELECT n.nspname AS schema_name,
+       p.proname AS function_name,
+       r.rolname AS owner
+FROM pg_proc p
+JOIN pg_namespace n ON p.pronamespace = n.oid
+JOIN pg_roles r ON p.proowner = r.oid
+WHERE n.nspname NOT IN ('pg_catalog', 'information_schema')
+ORDER BY schema_name, function_name;
+
+
+=====================================================================
+
+SELECT 
+    n.nspname AS schema_name,
+    p.proname AS procedure_name,
+    r.rolname AS owner
+FROM pg_proc p
+JOIN pg_namespace n ON p.pronamespace = n.oid
+JOIN pg_roles r ON p.proowner = r.oid
+WHERE p.prokind = 'p' -- Filters for procedures
+  AND n.nspname NOT IN ('pg_catalog', 'information_schema') -- Excludes system schemas
+ORDER BY schema_name, procedure_name;
+
+
+SELECT 
+    format(
+        'ALTER PROCEDURE %I.%I(%s) OWNER TO "Medical_Retirement";',
+        n.nspname, 
+        p.proname, 
+        COALESCE(pg_catalog.pg_get_function_arguments(p.oid), '') -- Handle no arguments
+    ) AS alter_statement
+FROM pg_proc p
+JOIN pg_namespace n ON p.pronamespace = n.oid
+WHERE p.prokind = 'p'
+  AND n.nspname = 'public'
+  AND pg_catalog.pg_get_function_arguments(p.oid) IS NOT NULL -- Ensure arguments exist
+ORDER BY n.nspname, p.proname;
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  Stored Procedures
+
+
+ Check Owners of All Stored Procedures
+
+SELECT proname, nspname AS schema_name, pg_roles.rolname AS owner
+FROM pg_proc 
+JOIN pg_namespace ON pg_proc.pronamespace = pg_namespace.oid
+JOIN pg_roles ON pg_proc.proowner = pg_roles.oid
+WHERE prokind = 'p';
+
+SELECT n.nspname AS schema_name, p.proname AS procedure_name, r.rolname AS owner
+FROM pg_proc p
+JOIN pg_namespace n ON p.pronamespace = n.oid
+JOIN pg_roles r ON p.proowner = r.oid
+WHERE p.prokind = 'p'   -- Replace with procedure name
+AND r.rolname = 'Medical_Retirement';  -- Check for a specific owner
+
+
+To see argument :- 
+
+SELECT proname, pg_get_function_arguments(oid) AS arguments
+FROM pg_proc
+WHERE proname = 'sp_tms_usp_ps_delete_tour_bill_expences'; 
+
+
+
+To change owner :- 
+ALTER PROCEDURE public.sp_tms_usp_ps_cancel_journey_details_for_full_reschedule(IN rjdrhkey bigint) OWNER TO 'Medical_Retirement';
+
+ALTER PROCEDURE public.delete_tour_request_journey_details(srgument palce here) OWNER TO retmeddb;
+
+To check arg:- 
+
+SELECT p.proname, r.rolname AS owner
+FROM pg_proc p
+JOIN pg_roles r ON p.proowner = r.oid
+WHERE p.proname = 'sp_tms_usp_ps_cancel_journey_details_for_full_reschedule';
+
+
+
+======================
+
+to change owner stored :- 
+
+SELECT 'ALTER PROCEDURE ' || n.nspname || '.' || p.proname || 
+       '(' || pg_catalog.pg_get_function_identity_arguments(p.oid) || ') OWNER TO "Medical_Retirement";' 
+FROM pg_proc p
+JOIN pg_namespace n ON p.pronamespace = n.oid
+WHERE n.nspname = 'public'  -- Change schema if needed
+AND p.prokind = 'p'  -- Ensure only procedures are included
+AND p.proname IN (
+    'sp_tms_sp_ps_uti_cancel_tickets',
+    'sp_tms_sp_ps_uti_file_upload',
+    'sp_tms_sp_ps_uti_vendor_details',
+    'sp_tms_update_details_for_send_invoice_to_admin',
+    'sp_tms_update_email_details',
+    'sp_tms_update_tour_bill_submission',
+    'sp_tms_update_tour_request_approval_details',
+    'sp_tms_update_tour_request_approval_forward_to_ceo',
+    'sp_tms_sp_ps_uti_save_new_tour_reqst',
+    'sp_tms_sp_ps_uti_save_tour_booking_details',
+    'sp_tms_sp_ps_uti_self_save_new_tour_reqst',
+    'sp_tms_sp_ps_uti_traveldesk_invoice_batch_generate',
+    'sp_tms_sp_ps_uti_update_ticket_status',
+    'sp_tms_sp_ps_uti_update_tour_booking_summary',
+    'sp_tms_sp_ps_uti_update_tour_booking_summary_for_admin',
+    'sp_tms_update_traveldesk_sap_export',
+    'sp_tms_usp_ps_bill_settlement_released_payment',
+    'sp_tms_usp_ps_save_tour_fare_details',
+    'sp_tms_usp_ps_save_tour_hotel_fare_details',
+    'sp_tms_usp_ps_save_tour_miscellaneous_expences_details',
+    'sp_tms_usp_ps_tour_bill_settelment',
+    'sp_tms_usp_ps_update_admissible_amout_for_converyance_charge',
+    'sp_tms_usp_ps_update_admissible_amout_for_hotel_charge',
+    'sp_tms_usp_ps_update_journey_details_for_reschedule',
+    'sp_tms_usp_ps_update_released_payment_details',
+    'sp_tms_usp_ps_uti_save_tour_cancel_details',
+    'sp_tms_usp_ps_uti_tour_fill_dropdown'
+);
