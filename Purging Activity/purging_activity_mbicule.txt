@@ -1,0 +1,96 @@
+TABLENAME : COMMUNICATION
+schema: digital_collections
+
+
+
+create table communications_July_2023_TO_JAN_2024
+as select * from communications c
+where Date(c.created_date) between to_date
+('01/07/2023', 'DD/MM/YYYY') 
+and to_date('31/01/2024', 'DD/MM/YYYY');
+
+
+select count(*) from communications c
+where Date(c.created_date) between to_date
+('01/07/2023', 'DD/MM/YYYY') 
+and to_date('31/01/2024', 'DD/MM/YYYY');
+
+
+
+delete from communications c
+ where Date(c.created_date) between to_date
+ ('01/07/2023', 'DD/MM/YYYY') 
+ and to_date('31/01/2024', 'DD/MM/YYYY');
+
+
+ 
+Re-Indexing on Communication table
+ 
+ 
+ digital_collections_varthana | communications                       | table | db_varthana | permanent   | heap          | 4548 MB
+ 
+ 
+ 
+           schemaname          |   tablename    |                indexname                | idx_scan
+------------------------------+----------------+-----------------------------------------+----------
+ digital_collections_varthana | communications | pk_communications                       |  2531089
+ digital_collections_varthana | communications | idx_trans_unique_id                     |  1955676
+ digital_collections_varthana | communications | idx_recipient_trans_unique_id_comm_type |       89
+ digital_collections_varthana | communications | idx_recipient_trans_unique_id           |   565815
+ digital_collections_varthana | communications | idx_apac_comm_type_status               |  5234105
+ digital_collections_varthana | communications | idx_shorten_link_unique_key             |   142230
+ digital_collections_varthana | communications | idx_created_date                        |    11307
+ 
+ 
+
+
+ REINDEX INDEX pk_communications;
+ REINDEX INDEX idx_trans_unique_id;
+ REINDEX INDEX idx_recipient_trans_unique_id_comm_type;
+ REINDEX INDEX idx_recipient_trans_unique_id;
+ REINDEX INDEX idx_apac_comm_type_status;
+ REINDEX INDEX idx_shorten_link_unique_key;
+ REINDEX INDEX idx_created_date;
+
+
+
+SELECT 'REINDEX INDEX ' || indexname || ';' AS reindex_command
+FROM pg_indexes
+WHERE tablename = 'communications';
+
+SELECT 'REINDEX INDEX ' || indexname || ';' AS reindex_command
+FROM pg_indexes
+WHERE tablename = 'communications' and schemaname IN ('digital_collections_varthana');
+
+ALTER TABLE communications_july_2023_to_jan_2024  postgres TO db_varthana;
+
+
+
+
+pg_dump -U postgres -d varthana -t digital_collections_varthana.communications  -f /data/communications.sql -v
+
+
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------
+ 
+SELECT schemaname, relname AS tablename, indexrelname AS indexname, idx_scan
+FROM pg_stat_all_indexes
+WHERE relname = 'communications' AND schemaname = 'digital_collections_varthana';
+
+
+SELECT 
+    indexname AS index_name,
+    indexdef AS index_definition
+FROM 
+    pg_indexes
+WHERE 
+    tablename = 'communications';
+
+
+SELECT
+    indexrelname AS index_name,
+    pg_size_pretty(pg_relation_size(indexrelid)) AS index_size
+FROM
+    pg_stat_user_indexes
+WHERE
+    relname = 'communications';
