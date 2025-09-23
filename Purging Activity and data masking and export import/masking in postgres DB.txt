@@ -1,0 +1,39 @@
+################How to Install################
+
+yum install install postgresql_anonymizer15
+Then load the extension with: ALTER DATABASE im_uat SET session_preload_libraries = 'anon';
+
+CREATE EXTENSION anon CASCADE;
+SELECT anon.init();
+SELECT anon.start_dynamic_masking();
+
+#################Declare a masked user#######################
+SECURITY LABEL FOR anon ON ROLE im_user IS 'MASKED';
+
+
+
+##################Masking Rule#############################
+create table  client_test as select * from client_m;
+
+select h1panno,h1mobile,h1emailid from client_test;
+
+security label for anon on column client_test.h1mobile
+ is 'MASKED WITH FUNCTION anon.partial(h1mobile,1,$$********$$,1)';
+ 
+ security label for anon on column client_test.h1panno
+ is 'MASKED WITH VALUE ''CONFIDENTIAL'' ';
+ 
+  security label for anon on column client_test.h1emailid
+ is 'MASKED WITH FUNCTION anon.partial_email(h1emailid)';
+ 
+ select h1panno,h1mobile,h1emailid from client_test;
+ 
+ ###################unmask###########################
+ security label for anon on column client_test.h1mobile is null;
+ 
+ By default masking is enable for public schema.
+ 
+ Refered Link 
+ https://postgresql-anonymizer.readthedocs.io/en/latest/dynamic_masking/
+ 
+ https://www.postgresql.org/about/news/postgresql-anonymizer-10-privacy-by-design-for-postgres-2452/
