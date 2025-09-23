@@ -1,0 +1,182 @@
+1. we wre found ERROR:  pg_attribute catalog is missing 4 attribute(s) for relation OID 28592
+2024-12-02 16:01:35 IST [2795772]: [7-1] db=HES,user=postgresLOG:  disconnection: session time: 0:03:35.083 user=postgres database=HES host=[local]
+2024-12-02 16:02:03 IST [2795964]: [1-1] db=[unknown],user=[unknown]LOG:  connection received: host=[local]
+2024-12-02 16:02:03 IST [2795964]: [2-1] db=postgres,user=postgresLOG:  connection authorized: user=postgres database=postgres application_name=psql
+2024-12-02 16:02:07 IST [2795967]: [1-1] db=[unknown],user=[unknown]LOG:  connection received: host=[local]
+2024-12-02 16:02:07 IST [2795967]: [2-1] db=HES,user=postgresLOG:  connection authorized: user=postgres database=HES application_name=psql
+2024-12-02 16:02:07 IST [2795964]: [3-1] db=postgres,user=postgresLOG:  disconnection: session time: 0:00:04.496 user=postgres database=postgres host=[local]
+2024-12-02 16:02:36 IST [2795967]: [3-1] db=HES,user=postgresERROR:  pg_attribute catalog is missing 4 attribute(s) for relation OID 28592
+
+2.then start db in single user mode 
+postgres --single -D /data/patroni HES
+
+3. after that we check age of database to release freeze bloating
+backend> SELECT datname, age(datfrozenxid), current_setting('autovacuum_freeze_max_age') FROM pg_database ORDER BY 2 DESC;
+         1: datname     (typeid = 19, len = 64, typmod = -1, byval = f)
+         2: age (typeid = 23, len = 4, typmod = -1, byval = t)
+         3: current_setting     (typeid = 25, len = -1, typmod = -1, byval = f)
+        ----
+         1: datname = "HES"     (typeid = 19, len = 64, typmod = -1, byval = f)
+         2: age = "2144483727"  (typeid = 23, len = 4, typmod = -1, byval = t)
+         3: current_setting = "2000000000"      (typeid = 25, len = -1, typmod = -1, byval = f)
+        ----
+         1: datname = "restore11"       (typeid = 19, len = 64, typmod = -1, byval = f)
+         2: age = "2074988602"  (typeid = 23, len = 4, typmod = -1, byval = t)
+         3: current_setting = "2000000000"      (typeid = 25, len = -1, typmod = -1, byval = f)
+        ----
+         1: datname = "template1"       (typeid = 19, len = 64, typmod = -1, byval = f)
+         2: age = "1970995629"  (typeid = 23, len = 4, typmod = -1, byval = t)
+         3: current_setting = "2000000000"      (typeid = 25, len = -1, typmod = -1, byval = f)
+        ----
+         1: datname = "test"    (typeid = 19, len = 64, typmod = -1, byval = f)
+         2: age = "1970995629"  (typeid = 23, len = 4, typmod = -1, byval = t)
+         3: current_setting = "2000000000"      (typeid = 25, len = -1, typmod = -1, byval = f)
+        ----
+         1: datname = "template0"       (typeid = 19, len = 64, typmod = -1, byval = f)
+         2: age = "1970920572"  (typeid = 23, len = 4, typmod = -1, byval = t)
+         3: current_setting = "2000000000"      (typeid = 25, len = -1, typmod = -1, byval = f)
+        ----
+         1: datname = "postgres"        (typeid = 19, len = 64, typmod = -1, byval = f)
+         2: age = "73"  (typeid = 23, len = 4, typmod = -1, byval = t)
+         3: current_setting = "2000000000"      (typeid = 25, len = -1, typmod = -1, byval = f)
+        ----
+2024-12-01 16:26:00 IST [2310407]: [13-1] db=,user=LOG:  duration: 1009.653 ms  statement: SELECT datname, age(datfrozenxid), current_setting('autovacuum_freeze_max_age') FROM pg_database ORDER BY 2 DESC;
+
+
+4.when we start vacuum freeze/vacuum full we got below error:
+
+vacuum freeze:
+
+backend> VACUUM FREEZE;
+2024-12-01 11:18:10 IST [2286855]: [3-1] db=,user=WARNING:  bypassing nonessential maintenance of table "HES.pg_toast.pg_toast_2619" as a failsafe after 0 index scans
+2024-12-01 11:18:10 IST [2286855]: [4-1] db=,user=DETAIL:  The table's relfrozenxid or relminmxid is too far in the past.
+2024-12-01 11:18:10 IST [2286855]: [5-1] db=,user=HINT:  Consider increasing configuration parameter "maintenance_work_mem" or "autovacuum_work_mem".
+        You might also need to consider other ways for VACUUM to keep up with the allocation of transaction IDs.
+2024-12-01 11:18:10 IST [2286855]: [6-1] db=,user=ERROR:  found xmin 270136376 from before relfrozenxid 1325051459
+2024-12-01 11:18:10 IST [2286855]: [7-1] db=,user=CONTEXT:  while scanning block 3 offset 4 of relation "pg_toast.pg_toast_2619"
+2024-12-01 11:18:10 IST [2286855]: [8-1] db=,user=STATEMENT:  VACUUM FREEZE;
+
+vacuum full:
+
+2024-12-01 20:41:12 IST [2330907]: [99-1] db=,user=WARNING:  database "HES" must be vacuumed within 2999468 transactions
+2024-12-01 20:41:12 IST [2330907]: [100-1] db=,user=HINT:  To avoid a database shutdown, execute a database-wide VACUUM in that database.
+        You might also need to commit or roll back old prepared transactions, or drop stale replication slots.
+2024-12-01 20:41:13 IST [2330907]: [101-1] db=,user=WARNING:  database "HES" must be vacuumed within 2999467 transactions
+2024-12-01 20:41:13 IST [2330907]: [102-1] db=,user=HINT:  To avoid a database shutdown, execute a database-wide VACUUM in that database.
+        You might also need to commit or roll back old prepared transactions, or drop stale replication slots.
+2024-12-01 20:41:13 IST [2330907]: [103-1] db=,user=WARNING:  database "HES" must be vacuumed within 2999466 transactions
+2024-12-01 20:41:13 IST [2330907]: [104-1] db=,user=HINT:  To avoid a database shutdown, execute a database-wide VACUUM in that database.
+        You might also need to commit or roll back old prepared transactions, or drop stale replication slots.
+2024-12-01 20:41:15 IST [2330907]: [105-1] db=,user=WARNING:  database "HES" must be vacuumed within 2999465 transactions
+2024-12-01 20:41:15 IST [2330907]: [106-1] db=,user=HINT:  To avoid a database shutdown, execute a database-wide VACUUM in that database.
+        You might also need to commit or roll back old prepared transactions, or drop stale replication slots.
+2024-12-01 20:41:16 IST [2330907]: [107-1] db=,user=WARNING:  database "HES" must be vacuumed within 2999464 transactions
+2024-12-01 20:41:16 IST [2330907]: [108-1] db=,user=HINT:  To avoid a database shutdown, execute a database-wide VACUUM in that database.
+        You might also need to commit or roll back old prepared transactions, or drop stale replication slots.
+2024-12-01 20:41:17 IST [2330907]: [109-1] db=,user=ERROR:  found xmin 165322384 from before relfrozenxid 1227026932
+2024-12-01 20:41:17 IST [2330907]: [110-1] db=,user=STATEMENT:  vacuum full;
+
+but issue is dosent resolve.
+
+5.after that we check where this oid is affected using below command:
+SELECT * FROM pg_attribute WHERE attrelid = 28592;
+
+6.after vacuum full we got this error 
+ The table's relfrozenxid or relminmxid is too far in the past.
+2024-12-01 20:50:02 IST [2330907]: [126-1] db=,user=HINT:  Consider increasing configuration parameter "maintenance_work_mem" or "autovacuum_work_mem".
+        You might also need to consider other ways for VACUUM to keep up with the allocation of transaction IDs.
+2024-12-01 20:50:02 IST [2330907]: [127-1] db=,user=ERROR:  found xmin 165322384 from before relfrozenxid 1227026932
+2024-12-01 20:50:02 IST [2330907]: [128-1] db=,user=CONTEXT:  while scanning block 546 offset 43 of relation "pg_catalog.pg_attribute"
+2024-12-01 20:50:02 IST [2330907]: [129-1] db=,user=STATEMENT:  vacuum pg_catalog.pg_attribute;
+
+for this issue we run below command in single user mode:
+
+SELECT oid, relname, relfrozenxid FROM pg_class WHERE relname = 'pg_attribute';
+-- Assume the OID is <oid_from_query>
+UPDATE pg_class SET relfrozenxid = (SELECT datfrozenxid FROM pg_database WHERE datname = 'HES')
+WHERE oid = <oid_from_query>;
+
+after that we take vacuum on pg_catalog.pg_attribute
+
+HES=# VACUUM FREEZE pg_catalog.pg_attribute;
+WARNING:  bypassing nonessential maintenance of table "HES.pg_catalog.pg_attribute" as a failsafe after 0 index scans
+DETAIL:  The table's relfrozenxid or relminmxid is too far in the past.
+HINT:  Consider increasing configuration parameter "maintenance_work_mem" or "autovacuum_work_mem".
+You might also need to consider other ways for VACUUM to keep up with the allocation of transaction IDs.
+ERROR:  found xmin 165322384 from before relfrozenxid 1227026932
+CONTEXT:  while scanning block 546 offset 43 of relation "pg_catalog.pg_attribute"
+HES=#
+
+
+after that we take backup of this table and try to drop and restore itagain but he give below error:
+backend> drop table pg_attribute;
+2024-12-02 07:22:39 IST [577647]: [3-1] db=,user=LOG:  statement: drop table pg_attribute;
+
+2024-12-02 07:22:39 IST [577647]: [4-1] db=,user=ERROR:  permission denied: "pg_attribute" is a system catalog
+
+postgres@hesdbn1drvm1:~$ psql -U postgres -d HES -t pg_catalog.pg_attribute -f /data/attribute.sql
+psql: warning: extra command-line argument "pg_catalog.pg_attribute" ignored
+SET
+SET
+SET
+SET
+SET
+
+
+SET
+SET
+SET
+SET
+SET
+SET
+psql:/data/attribute.sql:54: ERROR:  column "attmissingval" has pseudo-type anyarray
+psql:/data/attribute.sql:56: ERROR:  permission denied: "pg_attribute" is a system catalog
+psql:/data/attribute.sql:59: ERROR:  permission denied: "pg_attribute" is a system catalog
+psql:/data/attribute.sql:37702: ERROR:  database is not accepting commands to avoid wraparound data loss in database "HES"
+HINT:  Stop the postmaster and vacuum that database in single-user mode.
+You might also need to commit or roll back old prepared transactions, or drop stale replication slots.
+CONTEXT:  COPY pg_attribute, line 995
+psql:/data/attribute.sql:37710: ERROR:  permission denied: "pg_attribute" is a system catalog
+psql:/data/attribute.sql:37718: ERROR:  permission denied: "pg_attribute" is a system catalog
+postgres@hesdbn1drvm1:~$
+
+7. after that we suggest restore one day before pg_basebackup to avoid this issue 
+
+after restoration we get a  error like IN ACCESS SHARE MODE
+postgres@hesdbn2drvm2:/data$ tail -100f backup.log
+pg_dump: error: query failed: ERROR:  cache lookup failed for relation 23352
+pg_dump: detail: Query was: LOCK TABLE trans.t_bppdata_3p_old1 IN ACCESS SHARE MODE
+
+indicates a cache lookup failure for a specific relation (table) with OID 23352.The system catalogs (e.g., pg_class, pg_attribute) may be corrupted or inconsistent.
+
+8. then we take a single database backup with ignoring oid missing tables:
+pg_dump -j 10 -d HES -T 'trans.t_bppdata_3p_old*' -T 'trans.t_pushrawdata_rmq_p20240701' -T 'partman.template_trans_t_pushrawdata_rmq' -U postgres -Fd -f /data/hes.dump > /data/backup.log 2>&1 &
+
+
+and then we restore database creating new instance 
+pg_restore -j 10 -d HES -U hes_nbdcl_admin -Fd /data/hes.dump > /data/restore.log 2>&1 &
+
+9. then database is started working with read write operation
+
+
+====================================================
+
+Root Cause and Current State Analysis
+Catalog Corruption: The pg_attribute catalog has inconsistent relfrozenxid or xmin values, causing errors during vacuuming.
+Transaction ID Wraparound Risk: The database HES exceeds autovacuum_freeze_max_age, indicating severe bloat or failure to autovacuum.
+Failed Attempts: Direct manipulation (like attempting to drop and recreate pg_attribute) is failing due to its system catalog status.
+
+
+Observations and Suggestions for the Issue:
+Corruption in pg_attribute Catalog:
+
+The error indicates corruption in the pg_attribute system catalog, specifically that the catalog is missing attributes for certain OIDs. This is critical because pg_attribute defines table structures in PostgreSQL.
+Transaction Wraparound Risk:
+
+The database is nearing transaction ID wraparound, as evidenced by the warnings about the frozen XID. This suggests that autovacuum has not been effective or was unable to complete due to system constraints or corruption.
+System Catalog Handling (pg_attribute):
+
+Direct modifications to system catalogs, especially pg_attribute, are risky and generally unsupported. Errors like permission denied when dropping or restoring the catalog table are expected because it is a core system catalog.
+Restore Attempt Issues:
+
+Restoring a previous backup using pg_basebackup should work, but the subsequent error (cache lookup failed for relation 23352) indicates an issue with a missing or corrupted relation in the restored data. This may suggest that the backup itself was taken during a period of system instability.
