@@ -1,0 +1,22 @@
+Step 1. Enable WAL Summary	
+summarize_wal = 'on' in postgresql.conf.
+
+Step 2. Take a full backup
+/usr/lib/pgsql-17.0/bin/pg_basebackup -D /backup/fullbackup/ -c fast -p 5432 -v
+
+Step 3. Take a 1st incremental backup with full backup manifest 
+/usr/lib/pgsql-17.0/bin/pg_basebackup -D /backup/employees_db_incremental_1stbackup -i /backup/backup_manifest -c fast -p 5432 -v
+
+Step 4. Take a 2nd incremental backup with full backup manifest 
+/usr/lib/pgsql-17.0/bin/pg_basebackup -D /backup/employees_db_incremental_2ndbackup -i /backup/employees_db_incremental_1stbackup/backup_manifest -c fast -p 5432 -v
+
+Step 5. Combine All Backups in one specific directory
+/usr/lib/pgsql-17.0/bin/pg_combinebackup -o /abc /backup /backup/employees_db_incremental_1stbackup /backup/employees_db_incremental_2ndbackup
+
+Step 6.Edit combine backup file Config and change port then Start Server
+/usr/lib/pgsql-17.0/bin/pg_ctl -D /abc start
+
+Step 7. Validate Recovery 
+psql -U postgres incr_backup -p 5433
+
+SELECT * FROM employees;

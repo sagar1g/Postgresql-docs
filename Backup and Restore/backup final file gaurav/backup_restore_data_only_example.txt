@@ -1,0 +1,142 @@
+Prodction database sceniores:-
+
+1.Backup (pg_dump):- 
+
+pg_dump  --file "/home/pgsql/backup/$backupFileName" \
+         --host $SOURCE_PGHOST \
+         --port $SOURCE_PGPORT \
+         --username $SOURCE_PGUSER \
+         --verbose \
+         --format=c \
+         --blobs \
+         --data-only \
+         --no-owner \
+         --no-privileges \
+         --no-tablespaces \
+         -d ${db} \
+  > "/home/pgsql/backup/log/$backup_log" 2>&1
+
+
+✅ Explanation:
+
+--file → where to save the dump.
+
+--host, --port, --username → connection info.
+
+--verbose → prints details of progress.
+
+--format=c → custom format (recommended, can be used with pg_restore).
+
+--blobs → includes large objects (BLOBs).
+
+--data-only → only data, no schema.
+
+--no-owner, --no-privileges, --no-tablespaces → ignore ownership, GRANTs, tablespaces.
+
+-d ${db} → the source database.
+
+> ...log 2>&1 → write output and errors to a log file.
+
+👉 So this step takes a data-only backup of the source DB into a custom-format dump file.
+
+🔹 2. Truncate data in target database:- 
+
+psql -h 172.16.34.25 -p 5432 -U sa_ecgc -d poluw_shd_rod_lossmin_db \
+-c "DO \$\$ 
+DECLARE row record; 
+BEGIN 
+  FOR row IN 
+    SELECT table_schema, table_name 
+    FROM information_schema.tables 
+    WHERE table_schema NOT IN ('information_schema', 'pg_catalog') 
+      AND table_schema NOT LIKE 'pg_toast%' 
+      AND table_schema NOT LIKE 'pg_temp%' 
+      AND table_type = 'BASE TABLE' 
+  LOOP 
+    EXECUTE 'TRUNCATE TABLE ' || quote_ident(row.table_schema) || '.' || quote_ident(row.table_name) || ' CASCADE;';
+  END LOOP; 
+END 
+\$\$;"
+
+
+✅ Explanation:
+
+Connects to target database (poluw_shd_rod_lossmin_db).
+
+Runs a PL/pgSQL DO block that:
+
+1.Finds all user tables (ignores system schemas like pg_catalog, information_schema, toast, temp).
+
+2.Iterates through them.
+
+3.Runs TRUNCATE TABLE ... CASCADE on each → removes all rows from all tables.
+
+Effect: the target DB is emptied but schema (tables, constraints, indexes, functions) remain intact.
+
+🔹 3. Restore (pg_restore):- 
+
+pg_restore \
+  --host $TARGET_PGHOST \
+  --port $TARGET_PGPORT \
+  --username $TARGET_PGUSER \
+  --dbname ${db} \
+  --verbose \
+  --no-owner \
+  --no-privileges \
+  --no-tablespaces \
+  --disable-triggers \
+  --data-only\
+           /home/pgsql/backup/ecib_uw_db_29_09_2025_00_15_01_only_data.sql \
+  > /home/pgsql/restore.log 2>&1
+
+
+
+✅ Explanation:
+
+Connects to target DB: ecib_uw_db.
+
+--clean → drops database objects before recreating them (in this case it will run TRUNCATE or DELETE on tables before loading data, since it’s a data-only dump).
+
+🔹 Normally (schema + data dump)
+
+1.If you run pg_restore --clean on a full dump (schema + data):
+
+2.--clean tells pg_restore to drop existing objects first (DROP TABLE, DROP VIEW, DROP FUNCTION, etc.)
+
+3.Then it recreates the schema from the dump, and finally loads the data.
+
+👉 So the target DB is made to look exactly like the backup.
+
+🔹 In your case (data-only dump)
+
+1.Since your dump is created with --data-only, the file does not contain CREATE TABLE / CREATE VIEW / CREATE FUNCTION statements.
+
+2.It only has the data (INSERT statements or COPY commands).
+
+So, when you run:
+
+pg_restore --clean --data-only ...
+
+
+pg_restore will still try to clean before restore.
+
+But since there are no schema objects in the dump, there are no DROP TABLE statements in it.
+
+Instead, the "cleaning" step applies to the tables you’re loading data into.
+
+It means pg_restore will issue a TRUNCATE or DELETE on the table before inserting rows, to ensure you don’t get duplicates.
+
+--verbose → detailed output.
+
+--no-tablespaces → ignores tablespace info.
+
+--disable-triggers → disables foreign key triggers during restore (avoids FK violations while loading). They are re-enabled after restore.
+
+/home/pgsql/backup/...sql → the dump file you created.
+
+> restore.log 2>&1 → logs everything.
+
+--no-privileges → don’t restore GRANT/REVOKE statements.
+--no-owner → don’t restore object ownership (keeps target DB’s ownerships as is).
+
+👉 This step restores the dumped data into the target database. Since schema already exists, only data is inserted.
